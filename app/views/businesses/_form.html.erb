@@ -1,0 +1,78 @@
+<%= form_with model: business, url: business_path do |f| %>
+  <% if business.errors.any? %>
+    <div class="form-errors">
+      <strong><%= pluralize(business.errors.count, "error") %> prevented saving:</strong>
+      <ul>
+        <% business.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <h3>Identity</h3>
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :name %>
+      <%= f.text_field :name, autocomplete: "organization" %>
+    </div>
+    <div class="form-group">
+      <%= f.label :email %>
+      <%= f.email_field :email, autocomplete: "email" %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :tax_registration_number, "Registration number" %>
+      <%= f.text_field :tax_registration_number, placeholder: "T1234567890123" %>
+    </div>
+    <div class="form-group">
+      <%= f.label :tax_rate, "Tax rate (%)" %>
+      <%= f.number_field :tax_rate, step: 0.1 %>
+    </div>
+  </div>
+
+  <h3 class="mt-2">Address</h3>
+  <%= f.fields_for :address do |a| %>
+    <%= render "addresses/fields", form: a, address: a.object %>
+  <% end %>
+
+  <h3 class="mt-2">Bank Account</h3>
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :bank_name, "Bank" %>
+      <%= f.text_field :bank_name %>
+    </div>
+    <div class="form-group">
+      <%= f.label :bank_code, "Bank code" %>
+      <%= f.text_field :bank_code, placeholder: "0001" %>
+    </div>
+    <div class="form-group">
+      <%= f.label :bank_branch, "Branch" %>
+      <%= f.text_field :bank_branch %>
+    </div>
+    <div class="form-group">
+      <%= f.label :bank_branch_code, "Branch code" %>
+      <%= f.text_field :bank_branch_code, placeholder: "150" %>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :bank_account_holder, "Account holder" %>
+      <%= f.text_field :bank_account_holder %>
+    </div>
+    <div class="form-group">
+      <%= f.label :bank_account_type, "Account type" %>
+      <%= f.text_field :bank_account_type %>
+    </div>
+  </div>
+  <div class="form-group">
+    <%= f.label :bank_account_number, "Account number" %>
+    <%= f.text_field :bank_account_number %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.submit "Save", class: "btn btn-primary", data: { turbo_submits_with: "Saving..." } %>
+  </div>
+<% end %>

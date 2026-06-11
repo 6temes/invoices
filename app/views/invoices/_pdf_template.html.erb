@@ -1,0 +1,423 @@
+<%# locals: (invoice:, business:) -%>
+<% I18n.with_locale(invoice.locale) do %>
+<!DOCTYPE html>
+<html lang="<%= invoice.locale %>">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 40px 50px 60px 50px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #1a1a1a;
+      background: #fff;
+    }
+
+    .invoice-page {
+      width: 100%;
+      max-width: 750px;
+      margin: 0 auto;
+      padding: 40px 50px;
+      position: relative;
+    }
+
+    /* --- Header --- */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+    }
+
+    .header-title {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .from-block {
+      text-align: left;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .from-label, .invoice-for-label {
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    .from-name, .client-name {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .from-divider, .invoice-for-divider {
+      border-left: 2px solid #1a1a1a;
+      padding-left: 12px;
+    }
+
+    .registration-number {
+      margin-top: 8px;
+      font-size: 11px;
+    }
+
+    /* --- Parties section (From + Invoice For side by side) --- */
+    .parties-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .parties-section > div {
+      flex: 1;
+    }
+
+    .client-address {
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 2px;
+    }
+
+    /* --- Meta section --- */
+    .meta-section {
+      margin-bottom: 30px;
+    }
+
+    .meta-row {
+      display: flex;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 5px 0;
+    }
+
+    .meta-label {
+      width: 90px;
+      color: #888;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .meta-value {
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    /* --- Line items table --- */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    .items-table thead th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 8px 10px;
+      border-bottom: 2px solid #1a1a1a;
+      border-top: 2px solid #1a1a1a;
+    }
+
+    .items-table thead th.right {
+      text-align: right;
+    }
+
+    .items-table tbody td {
+      padding: 10px 10px;
+      border-bottom: 1px solid #e5e5e5;
+      vertical-align: top;
+      font-size: 12px;
+    }
+
+    .items-table tbody td.right {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .col-type { width: 70px; }
+    .col-qty { width: 60px; }
+    .col-price { width: 90px; }
+    .col-amount { width: 90px; }
+
+    /* --- Totals --- */
+    .totals {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 30px;
+    }
+
+    .totals-table {
+      width: 280px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+
+    .totals-row.total-line {
+      border-top: 2px solid #1a1a1a;
+      margin-top: 6px;
+      padding-top: 10px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .totals-label {
+      color: #555;
+    }
+
+    .totals-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .total-line .totals-label,
+    .total-line .totals-value {
+      color: #1a1a1a;
+    }
+
+    /* --- Bank transfer details --- */
+    .bank-section {
+      border-top: 2px solid #1a1a1a;
+      padding-top: 12px;
+      margin-top: 10px;
+    }
+
+    .bank-title {
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .bank-details {
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .bank-row {
+      display: flex;
+    }
+
+    .bank-label {
+      width: 120px;
+      color: #555;
+      flex-shrink: 0;
+    }
+
+    .bank-value {
+      font-weight: 600;
+    }
+
+    /* --- Notes --- */
+    .notes-section {
+      border-top: 2px solid #1a1a1a;
+      padding-top: 12px;
+      margin-top: 20px;
+    }
+
+    .notes-title {
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .notes-body {
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    /* --- Footer --- */
+    .page-footer {
+      position: fixed;
+      bottom: 30px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10px;
+      color: #888;
+    }
+
+    /* --- Paid stamp --- */
+    .paid-stamp {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-15deg);
+      font-size: 72px;
+      font-weight: 900;
+      color: rgba(5, 150, 105, 0.15);
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-page">
+    <% if invoice.paid? %>
+      <div class="paid-stamp"><%= t("invoice.paid_stamp") %></div>
+    <% end %>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-title"><%= t("invoice.document_title") %></div>
+    </div>
+
+    <!-- From + Invoice For (aligned side by side) -->
+    <div class="parties-section">
+      <div>
+        <div class="from-label"><%= t("invoice.from") %></div>
+        <div class="from-divider">
+          <div class="from-name"><%= business.name %></div>
+          <% if business.address %>
+            <% business.address.formatted_lines.each do |line| %>
+              <%= line %><br>
+            <% end %>
+          <% end %>
+          <div class="registration-number"><%= t("invoice.registration_number") %> <%= business.tax_registration_number %></div>
+        </div>
+      </div>
+      <div>
+        <div class="invoice-for-label"><%= t("invoice.for") %></div>
+        <div class="invoice-for-divider">
+          <div class="client-name"><%= invoice.client.name %></div>
+          <% if invoice.client.address %>
+            <div class="client-address">
+              <% invoice.client.address.formatted_lines.each do |line| %>
+                <%= line %><br>
+              <% end %>
+            </div>
+          <% end %>
+          <% if invoice.client.tax_registration_number.present? %>
+            <div class="registration-number"><%= t("invoice.registration_number") %> <%= invoice.client.tax_registration_number %></div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meta -->
+    <div class="meta-section">
+      <div class="meta-row">
+        <span class="meta-label"><%= t("invoice.id") %></span>
+        <span class="meta-value"><%= invoice.invoice_number %></span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label"><%= t("invoice.issue_date") %></span>
+        <span class="meta-value"><%= invoice.issue_date %></span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label"><%= t("invoice.due_date") %></span>
+        <span class="meta-value"><%= invoice.due_date %> (<%= t("invoice.payment_terms", days: invoice.client.payment_terms_days) %>)</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label"><%= t("invoice.subject_label") %></span>
+        <span class="meta-value"><%= invoice.subject %></span>
+      </div>
+    </div>
+
+    <!-- Line Items -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th class="col-type"><%= t("invoice.item_type") %></th>
+          <th class="col-desc"><%= t("invoice.description") %></th>
+          <th class="col-qty right"><%= t("invoice.quantity") %></th>
+          <th class="col-price right"><%= t("invoice.unit_price") %></th>
+          <th class="col-amount right"><%= t("invoice.amount") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% invoice.line_items.each do |item| %>
+          <tr>
+            <td><%= item_type_label(item.item_type) %></td>
+            <td><%= item.description %></td>
+            <td class="right"><%= item.quantity % 1 == 0 ? item.quantity.to_i : item.quantity %></td>
+            <td class="right">¥<%= number_with_delimiter item.unit_price %></td>
+            <td class="right"><strong>¥<%= number_with_delimiter item.amount %></strong></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="totals">
+      <div class="totals-table">
+        <div class="totals-row">
+          <span class="totals-label"><%= t("invoice.subtotal") %></span>
+          <span class="totals-value">¥<%= number_with_delimiter invoice.subtotal %></span>
+        </div>
+        <div class="totals-row">
+          <span class="totals-label"><%= t("invoice.tax", rate: invoice.tax_rate.to_i) %></span>
+          <span class="totals-value">¥<%= number_with_delimiter invoice.tax_amount %></span>
+        </div>
+        <% if invoice.paid? %>
+          <div class="totals-row">
+            <span class="totals-label"><%= t("invoice.payments") %></span>
+            <span class="totals-value">-¥<%= number_with_delimiter invoice.paid_amount %></span>
+          </div>
+        <% end %>
+        <div class="totals-row total-line">
+          <span class="totals-label"><%= invoice.paid? ? t("invoice.amount_due") : t("invoice.total") %></span>
+          <span class="totals-value">¥<%= number_with_delimiter(invoice.paid? ? (invoice.total - invoice.paid_amount) : invoice.total) %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bank Transfer Details -->
+    <% if invoice.client.bank_transfer? %>
+      <div class="bank-section">
+        <div class="bank-title"><%= t("invoice.bank_transfer_instructions") %></div>
+        <div class="bank-details">
+          <div class="bank-row">
+            <span class="bank-label"><%= t("invoice.bank_name") %></span>
+            <span class="bank-value"><%= business.bank_name %></span>
+          </div>
+          <div class="bank-row">
+            <span class="bank-label"><%= t("invoice.bank_branch") %></span>
+            <span class="bank-value"><%= business.bank_branch %></span>
+          </div>
+          <div class="bank-row">
+            <span class="bank-label"><%= t("invoice.bank_account_type") %></span>
+            <span class="bank-value"><%= business.bank_account_type %></span>
+          </div>
+          <div class="bank-row">
+            <span class="bank-label"><%= t("invoice.bank_account_number") %></span>
+            <span class="bank-value"><%= business.bank_account_number %></span>
+          </div>
+          <div class="bank-row">
+            <span class="bank-label"><%= t("invoice.bank_account_holder") %></span>
+            <span class="bank-value"><%= business.bank_account_holder %></span>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Notes -->
+    <% if invoice.notes.present? %>
+      <div class="notes-section">
+        <div class="notes-title"><%= t("invoice.notes") %></div>
+        <div class="notes-body"><%= simple_format invoice.notes, {}, wrapper_tag: "div" %></div>
+      </div>
+    <% end %>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      <%= t("invoice.page_numbering", page: 1, total: 1) %>
+    </div>
+  </div>
+</body>
+</html>
+<% end %>

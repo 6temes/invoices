@@ -1,0 +1,144 @@
+<%# locals: (invoice:, business:) -%>
+<div class="page-header">
+  <h1>Invoice #<%= invoice.invoice_number %></h1>
+  <div class="btn-group">
+    <% if invoice.draft? %>
+      <%= link_to "Edit", edit_invoice_path(invoice), class: "btn" %>
+      <%= button_to "Send invoice", deliver_invoice_path(invoice), class: "btn btn-accent", data: { turbo_confirm: "Generate PDF and send this invoice to #{invoice.client.name}?", turbo_submits_with: "Sending..." } %>
+      <%= button_to "Delete", invoice_path(invoice), method: :delete, class: "btn btn-danger", data: { turbo_confirm: "Delete this draft?" } %>
+    <% elsif invoice.preparing? %>
+      <span class="btn btn-accent" style="opacity: 0.6; pointer-events: none;">Sending...</span>
+    <% elsif invoice.sent? %>
+      <%= link_to "Mark as paid", payment_invoice_path(invoice), class: "btn btn-accent", data: { action: "slideover#open" } %>
+    <% elsif invoice.failed? %>
+      <%= button_to "Retry", retry_delivery_invoice_path(invoice), class: "btn btn-accent", data: { turbo_confirm: "Retry sending this invoice?" } %>
+      <%= button_to "Revert to draft", revert_to_draft_invoice_path(invoice), class: "btn", data: { turbo_confirm: "Revert this invoice to draft?" } %>
+    <% end %>
+    <% if invoice.pdf.attached? %>
+      <%= link_to "Download PDF", rails_blob_path(invoice.pdf, disposition: "attachment"), class: "btn", download: true %>
+    <% end %>
+    <% if invoice.ubl_xml.attached? %>
+      <%= link_to "Download UBL XML", rails_blob_path(invoice.ubl_xml, disposition: "attachment"), class: "btn", download: true %>
+    <% end %>
+  </div>
+</div>
+
+<span class="badge badge-<%= invoice.status %>" style="font-size: 13px; margin-bottom: 1rem; display: inline-block;"><%= invoice.status.upcase %></span>
+
+<div class="card">
+  <% I18n.with_locale(invoice.locale) do %>
+    <div class="detail-grid">
+      <div>
+        <div class="detail-section">
+          <div class="detail-label"><%= t("invoice.id") %></div>
+          <div class="detail-value"><strong><%= invoice.invoice_number %></strong></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label"><%= t("invoice.issue_date") %></div>
+          <div class="detail-value"><%= invoice.issue_date %></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label"><%= t("invoice.due_date") %></div>
+          <div class="detail-value"><%= invoice.due_date %></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label">Subject</div>
+          <div class="detail-value"><%= invoice.subject %></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="detail-section">
+          <div class="detail-label"><%= t("invoice.from") %></div>
+          <div class="detail-value">
+            <strong><%= business.name %></strong><br>
+            <% if business.address %>
+              <%= render "addresses/address", address: business.address %>
+            <% end %>
+            <%= t("invoice.registration_number") %> <%= business.tax_registration_number %>
+          </div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label"><%= t("invoice.for") %></div>
+          <div class="detail-value">
+            <strong><%= invoice.client.name %></strong><br>
+            <% if invoice.client.address %>
+              <%= render "addresses/address", address: invoice.client.address %>
+            <% end %>
+            <% if invoice.client.tax_registration_number.present? %>
+              <%= t("invoice.registration_number") %> <%= invoice.client.tax_registration_number %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive mt-2">
+      <table>
+        <thead>
+          <tr>
+            <th><%= t("invoice.item_type") %></th>
+            <th><%= t("invoice.description") %></th>
+            <th class="text-right"><%= t("invoice.quantity") %></th>
+            <th class="text-right"><%= t("invoice.unit_price") %></th>
+            <th class="text-right"><%= t("invoice.amount") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% invoice.line_items.each do |item| %>
+            <tr>
+              <td><%= item_type_label(item.item_type) %></td>
+              <td><%= item.description %></td>
+              <td class="text-right"><%= item.quantity %></td>
+              <td class="text-right currency">¥<%= number_with_delimiter item.unit_price %></td>
+              <td class="text-right currency">¥<%= number_with_delimiter item.amount %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" class="text-right"><strong><%= t("invoice.subtotal") %></strong></td>
+            <td class="text-right currency"><strong>¥<%= number_with_delimiter invoice.subtotal %></strong></td>
+          </tr>
+          <tr>
+            <td colspan="4" class="text-right"><%= t("invoice.tax", rate: invoice.tax_rate) %></td>
+            <td class="text-right currency">¥<%= number_with_delimiter invoice.tax_amount %></td>
+          </tr>
+          <tr>
+            <td colspan="4" class="text-right"><strong><%= t("invoice.total") %></strong></td>
+            <td class="text-right currency"><strong>¥<%= number_with_delimiter invoice.total %></strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <% if invoice.notes.present? %>
+      <div class="detail-section mt-2">
+        <div class="detail-label"><%= t("invoice.notes") %></div>
+        <div class="detail-value"><%= simple_format invoice.notes %></div>
+      </div>
+    <% end %>
+  <% end %>
+</div>
+
+<% if invoice.paid? %>
+  <div class="card mt-2">
+    <div class="detail-grid">
+      <div>
+        <div class="detail-section">
+          <div class="detail-label"><%= t("invoice.paid_on") %></div>
+          <div class="detail-value">
+            <%= invoice.paid_on %>
+            <%= link_to "Edit", payment_invoice_path(invoice), class: "btn btn-sm", style: "margin-left: 0.5rem;", data: { action: "slideover#open" } %>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="detail-section">
+          <div class="detail-label"><%= t("invoice.paid_amount") %></div>
+          <div class="detail-value currency">¥<%= number_with_delimiter invoice.paid_amount %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>

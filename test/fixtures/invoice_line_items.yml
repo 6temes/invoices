@@ -1,0 +1,26 @@
+acme_january_retainer:
+  invoice: acme_january
+  item_type: Service
+  description: "Monthly retainer for Web development and maintenance (includes 10 hours) — January 2026"
+  quantity: 1.0
+  unit_price: 100000
+  amount: 100000
+  origin: retainer
+
+acme_february_retainer:
+  invoice: acme_february_draft
+  item_type: Service
+  description: "Monthly retainer for Web development and maintenance (includes 10 hours) — February 2026"
+  quantity: 1.0
+  unit_price: 100000
+  amount: 100000
+  origin: retainer
+
+sakura_january_retainer:
+  invoice: sakura_january
+  item_type: Service
+  description: "ウェブ開発・保守・サーバー運用の月額リテイナー（20時間含む） — 2026年1月"
+  quantity: 1.0
+  unit_price: 225000
+  amount: 225000
+  origin: retainer

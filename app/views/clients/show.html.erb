@@ -1,0 +1,163 @@
+<div data-controller="slideover" data-action="keydown@window->slideover#closeOnKeydown">
+  <div class="page-header">
+    <h1><%= @client.name %></h1>
+    <div class="btn-group">
+      <%= link_to "Edit", edit_client_path(@client), class: "btn" %>
+      <%= link_to "Log extra hours", new_client_extra_hour_path(@client), class: "btn", data: { action: "slideover#open" } %>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div>
+      <div class="detail-section">
+        <div class="detail-label">Contact</div>
+        <div class="detail-value"><%= @client.contact_name %></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">Email</div>
+        <div class="detail-value"><%= @client.email %></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">Locale</div>
+        <div class="detail-value"><span class="badge badge-<%= @client.locale %>"><%= @client.locale.upcase %></span></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">Payment method</div>
+        <div class="detail-value"><%= @client.payment_method.humanize %></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">Payment terms</div>
+        <div class="detail-value">Net <%= @client.payment_terms_days %></div>
+      </div>
+      <% if @client.tax_registration_number.present? %>
+        <div class="detail-section">
+          <div class="detail-label">Tax registration number</div>
+          <div class="detail-value text-mono"><%= @client.tax_registration_number %></div>
+        </div>
+      <% end %>
+      <% if @client.credit_card? && @client.stripe_customer_id.present? %>
+        <div class="detail-section">
+          <div class="detail-label">Stripe customer</div>
+          <div class="detail-value text-mono"><%= link_to @client.stripe_customer_id, "https://dashboard.stripe.com/customers/#{@client.stripe_customer_id}", target: "_blank" %></div>
+        </div>
+      <% end %>
+    </div>
+
+    <div>
+      <% if @client.address %>
+        <div class="detail-section">
+          <div class="detail-label">Address</div>
+          <div class="detail-value">
+            <%= render "addresses/address", address: @client.address %>
+          </div>
+        </div>
+      <% end %>
+      <% if @client.github_repos.any? %>
+        <div class="detail-section">
+          <div class="detail-label">GitHub repos</div>
+          <div class="detail-value">
+            <% @client.github_repos.each do |repo| %>
+              <div class="text-mono"><%= repo %></div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <h2>Active Retainer</h2>
+  <% if (active = @client.active_retainer) %>
+    <div class="card mb-2">
+      <div class="card-header">
+        <strong><%= active.subject %></strong>
+        <%= link_to "Edit", edit_client_retainer_path(@client, active), class: "btn btn-sm" %>
+      </div>
+      <div class="detail-grid">
+        <div>
+          <div class="detail-section">
+            <div class="detail-label">Monthly amount</div>
+            <div class="detail-value currency">¥<%= number_with_delimiter active.monthly_amount %></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-label">Monthly hours</div>
+            <div class="detail-value"><%= active.monthly_hours % 1 == 0 ? active.monthly_hours.to_i : active.monthly_hours %></div>
+          </div>
+        </div>
+        <div>
+          <div class="detail-section">
+            <div class="detail-label">Hourly rate (extras)</div>
+            <div class="detail-value currency">¥<%= number_with_delimiter active.hourly_rate %></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-label">Includes infrastructure</div>
+            <div class="detail-value"><%= active.includes_infrastructure? ? "Yes" : "No" %></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <p>No active retainer.</p>
+      <%= link_to "Create retainer", new_client_retainer_path(@client), class: "btn btn-primary" %>
+    </div>
+  <% end %>
+
+  <h2 class="mt-3">Unbilled Extra Hours</h2>
+  <% if @unbilled_extra_hours.any? %>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th class="text-right">Hours</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="unbilled_extra_hours">
+          <% @unbilled_extra_hours.each do |extra| %>
+            <%= render "extra_hours/extra_hour_row", client: @client, extra_hour: extra %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="text-muted">No unbilled extra hours.</p>
+  <% end %>
+
+  <% if @retainers.size > 1 %>
+    <h2 class="mt-3">Retainer History</h2>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th class="text-right">Monthly</th>
+            <th>Period</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @retainers.reject { it.ends_on.nil? }.each do |retainer| %>
+            <tr>
+              <td><%= link_to retainer.subject, client_retainer_path(@client, retainer) %></td>
+              <td class="text-right currency">¥<%= number_with_delimiter retainer.monthly_amount %></td>
+              <td class="text-muted"><%= retainer.starts_on %> — <%= retainer.ends_on %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <%# Slideover panel for extra hours forms %>
+  <div class="slideover-backdrop" data-action="click->slideover#close"></div>
+  <div class="slideover-panel" data-slideover-target="panel" data-action="turbo:submit-end->slideover#submitEnd">
+    <div class="slideover-header">
+      <h2>Extra Hours</h2>
+      <button type="button" class="slideover-close" data-action="slideover#close">&times;</button>
+    </div>
+    <div class="slideover-body">
+      <turbo-frame id="slideover_frame" data-slideover-target="frame"></turbo-frame>
+    </div>
+  </div>
+</div>

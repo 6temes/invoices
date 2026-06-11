@@ -1,0 +1,8 @@
+<% unless @page.last? %>
+  <% next_page_url = invoices_path(tab: @tab, client_id: params[:client_id], status: params[:status], year: params[:year], page: @page.next_param, format: :turbo_stream) %>
+  <turbo-frame id="page_<%= @page.next_param %>" src="<%= next_page_url %>" loading="lazy">
+    <div class="mt-2 text-center" style="padding: 1rem;">
+      Loading...
+    </div>
+  </turbo-frame>
+<% end %>

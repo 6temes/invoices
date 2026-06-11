@@ -1,0 +1,20 @@
+<%# locals: (form:, address:) -%>
+
+<div data-controller="country-selector"
+     data-country-selector-url-value="<%= address_fields_path %>"
+     data-country-selector-object-name-value="<%= form.object_name %>"
+     data-country-selector-address-id-value="<%= address.id %>">
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= form.label :country_code, "Country" %>
+      <%= form.select :country_code,
+            Address::COUNTRY_OPTIONS,
+            { selected: address.country_code },
+            data: { country_selector_target: "select", action: "change->country-selector#change" } %>
+    </div>
+  </div>
+
+  <%= render address.fields_partial,
+             address: address, object_name: form.object_name %>
+</div>

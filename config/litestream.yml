@@ -1,0 +1,30 @@
+# Prometheus metrics endpoint (scraped over the private network).
+addr: ":9090"
+
+# Global SFTP defaults — inherited by all replicas. Host/user come from the
+# container environment (set by the litestream accessory in config/deploy.yml)
+# so the private backup endpoint stays out of source control. Replicates over a
+# private network link, not the public SSH endpoint, to keep backup traffic off
+# the internet. (Litestream still logs "host key not verified" — it isn't reading
+# known_hosts on this scratch image; non-fatal, tracked separately.)
+host: ${LITESTREAM_SFTP_HOST}
+user: ${LITESTREAM_SFTP_USER}
+key-path: /etc/litestream/sftp_key
+sync-interval: 10s
+
+dbs:
+  - path: /rails/storage/production.sqlite3
+    replicas:
+      - type: sftp
+        path: /srv/docker/invoices/litestream/production.sqlite3
+        snapshot-interval: 24h
+        retention: 72h
+        retention-check-interval: 1h
+
+  - path: /rails/storage/production_queue.sqlite3
+    replicas:
+      - type: sftp
+        path: /srv/docker/invoices/litestream/production_queue.sqlite3
+        snapshot-interval: 24h
+        retention: 72h
+        retention-check-interval: 1h

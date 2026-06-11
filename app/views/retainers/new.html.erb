@@ -1,0 +1,12 @@
+<div class="page-header">
+  <h1>New Retainer for <%= @client.name %></h1>
+</div>
+
+<% if @client.active_retainer %>
+  <div class="flash flash-notice">
+    This client has an active retainer (¥<%= number_with_delimiter @client.active_retainer.monthly_amount %>).
+    It will be automatically closed when the new retainer is created.
+  </div>
+<% end %>
+
+<%= render "form", client: @client, retainer: @retainer %>

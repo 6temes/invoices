@@ -1,0 +1,14 @@
+#!/bin/bash -e
+
+# If running the rails server then create or migrate existing database
+if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  # Restore databases from Litestream replicas if they don't exist on the volume.
+  # -if-db-not-exists: skip if database file already present (normal redeploy)
+  # -if-replica-exists: skip if no replica yet (first-ever deploy)
+  litestream restore -config /etc/litestream.yml -if-db-not-exists -if-replica-exists /rails/storage/production.sqlite3 || true
+  litestream restore -config /etc/litestream.yml -if-db-not-exists -if-replica-exists /rails/storage/production_queue.sqlite3 || true
+
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"

@@ -1,0 +1,11 @@
+<% if @destroyed %>
+  <%= turbo_stream.remove dom_id(@extra_hour) %>
+
+  <%= turbo_stream.prepend "flash_messages" do %>
+    <%= render "shared/flash", type: :notice, message: "Extra hours deleted." %>
+  <% end %>
+<% else %>
+  <%= turbo_stream.prepend "flash_messages" do %>
+    <%= render "shared/flash", type: :alert, message: @error_message %>
+  <% end %>
+<% end %>

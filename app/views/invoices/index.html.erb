@@ -1,0 +1,68 @@
+<%= turbo_stream_from "invoices" %>
+<div class="page-header">
+  <h1>Invoices</h1>
+  <div class="btn-group">
+    <%= link_to "New invoice", new_invoice_path, class: "btn btn-primary" %>
+  </div>
+</div>
+
+<div class="summary-cards">
+  <div class="summary-card">
+    <div class="summary-card-label">Open</div>
+    <div class="summary-card-value">¥<%= number_with_delimiter @total_open %></div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-card-label">Paid</div>
+    <div class="summary-card-value">¥<%= number_with_delimiter @total_paid %></div>
+  </div>
+</div>
+
+<div data-controller="chart" data-chart-data-value="<%= @chart_data.to_json %>"></div>
+
+<div class="filter-bar mb-2">
+  <div class="btn-group">
+    <%= link_to "Open", invoices_path(tab: "open", client_id: params[:client_id], status: params[:status], year: params[:year]),
+          class: "btn btn-sm #{"btn-primary" if @tab == "open"}" %>
+    <%= link_to "All", invoices_path(tab: "all", client_id: params[:client_id], status: params[:status], year: params[:year]),
+          class: "btn btn-sm #{"btn-primary" if @tab == "all"}" %>
+  </div>
+
+  <%= form_with url: invoices_path, method: :get, class: "form-inline", data: { controller: "auto-submit" } do %>
+    <input type="hidden" name="tab" value="<%= @tab %>">
+    <div class="form-group">
+      <%= select_tag :client_id, options_from_collection_for_select(@clients, :id, :name, params[:client_id]),
+            include_blank: "All clients", data: { action: "change->auto-submit#submit" } %>
+    </div>
+    <div class="form-group">
+      <%= select_tag :year, options_for_select(@years, params[:year]),
+            include_blank: "All years", data: { action: "change->auto-submit#submit" } %>
+    </div>
+  <% end %>
+</div>
+
+<% if @invoices.any? %>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Issue Date</th>
+          <th>Invoice #</th>
+          <th>Client</th>
+          <th class="text-right">Amount</th>
+          <th class="text-right">Paid</th>
+          <th class="text-right">Balance</th>
+        </tr>
+      </thead>
+      <tbody id="invoices">
+        <%= render partial: "invoices/invoice_row", collection: @invoices, as: :invoice %>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "invoices/next_page" %>
+<% else %>
+  <div class="empty-state">
+    <p>No invoices found.</p>
+  </div>
+<% end %>

@@ -1,0 +1,34 @@
+business_address:
+  addressable: default (Business)
+  country_code: JP
+  postal_code: "150-0001"
+  administrative_area: 東京都
+  locality: 渋谷区
+  sublocality: 神宮前
+  street: 1-2-3 1F
+
+acme_address:
+  addressable: acme (Client)
+  country_code: JP
+  postal_code: "100-0001"
+  administrative_area: 東京都
+  locality: 千代田区
+  sublocality: 丸の内
+  street: 1-1-1
+
+sakura_address:
+  addressable: sakura (Client)
+  country_code: JP
+  postal_code: "150-0001"
+  administrative_area: 東京都
+  locality: 渋谷区
+  sublocality: 神宮前
+  street: 3-5-10
+
+fuji_address:
+  addressable: fuji (Client)
+  country_code: JP
+  postal_code: "530-0001"
+  administrative_area: 大阪府
+  locality: 大阪市北区
+  street: 梅田1-2-3

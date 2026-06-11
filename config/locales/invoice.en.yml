@@ -1,0 +1,57 @@
+en:
+  invoice:
+    document_title: INVOICE
+    from: From
+    for: Invoice For
+    id: Invoice ID
+    issue_date: Issue Date
+    due_date: Due Date
+    subject: Software Development Services
+    subject_label: Subject
+    item_type: Item Type
+    item_types:
+      service: Service
+    description: Description
+    quantity: Quantity
+    unit_price: Unit Price
+    amount: Amount
+    subtotal: Subtotal
+    tax: "Tax (%{rate}%)"
+    total: Total
+    amount_due: Amount Due
+    paid_stamp: PAID
+    notes: Notes
+    paid_on: "Paid on"
+    paid_amount: "Paid amount"
+    registration_number: JP TRN
+    payment_terms: "Net %{days}"
+    bank_transfer_instructions: "Please transfer the amount due to:"
+    bank_name: Bank
+    bank_branch: Branch
+    bank_account_holder: Account Holder
+    bank_account_type: Account Type
+    bank_account_number: Account No.
+    pay_with_credit_card: Pay with Credit Card
+    payment_error: "Something went wrong with your payment. Please try again in a few minutes."
+    transfer_instructions: Transfer details are included in the attached invoice.
+    page_numbering: "Page %{page} of %{total}"
+    retainer_subject: Web development and maintenance
+    retainer_subject_with_infrastructure: Web development, maintenance, and server infrastructure
+    retainer_line: "Monthly retainer for %{subject} (includes %{hours} hours) — %{period}"
+    extra_hours_with_desc: "Additional development: %{description} (%{hours}h)"
+    extra_hours_generic: "Additional development hours beyond retainer (%{hours}h)"
+    month_year: "%{month_name} %{year}"
+    payments: Payments
+    thank_you_title: Thank you for your payment
+    thank_you_body: "Invoice #%{number} has been paid."
+
+  invoice_mailer:
+    send_invoice:
+      subject: "Invoice #%{number} — %{invoice_subject}"
+      greeting: "Hi %{client_name},"
+      body: "Please find attached invoice #%{number} for ¥%{total}, covering %{invoice_subject} for %{period}."
+      due_date: "Payment is due by %{date}."
+      bank_instructions: "Transfer details are included in the attached invoice."
+      stripe_instructions: "You can pay securely by credit card here: %{link}"
+      closing: "Thank you for your continued partnership."
+      signature: "Best regards,"

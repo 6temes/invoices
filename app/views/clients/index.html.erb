@@ -1,0 +1,46 @@
+<div class="page-header">
+  <h1>Clients</h1>
+  <%= link_to "New client", new_client_path, class: "btn btn-primary" %>
+</div>
+
+<% if @clients.any? %>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Locale</th>
+          <th>Payment</th>
+          <th class="text-right">Retainer</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @clients.each do |client| %>
+          <tr>
+            <td><%= link_to client.name, client %></td>
+            <td class="text-muted"><%= client.email %></td>
+            <td><span class="badge badge-<%= client.locale %>"><%= client.locale.upcase %></span></td>
+            <td><%= client.payment_method.humanize %></td>
+            <td class="text-right currency">
+              <% if (retainer = client.retainers.active.first) %>
+                ¥<%= number_with_delimiter retainer.monthly_amount %>
+              <% else %>
+                <span class="text-muted">—</span>
+              <% end %>
+            </td>
+            <td class="text-right">
+              <%= link_to "Edit", edit_client_path(client), class: "btn btn-sm" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <div class="empty-state">
+    <p>No clients yet.</p>
+    <%= link_to "Add your first client", new_client_path, class: "btn btn-primary" %>
+  </div>
+<% end %>

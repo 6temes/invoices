@@ -1,0 +1,40 @@
+<% I18n.with_locale(@invoice.locale) do %>
+  <div class="card" style="text-align: center; padding: 2rem;">
+    <h1 style="margin-bottom: 0.5rem;"><%= t("invoice.document_title") %> #<%= @invoice.invoice_number %></h1>
+    <p class="text-muted"><%= @invoice.client.name %></p>
+
+    <div class="summary-card" style="margin: 2rem auto; max-width: 300px;">
+      <div class="summary-card-label"><%= t("invoice.amount_due") %></div>
+      <div class="summary-card-value">¥<%= number_with_delimiter @invoice.total %></div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label"><%= t("invoice.subject_label") %></div>
+      <div class="detail-value"><%= @invoice.subject %></div>
+    </div>
+
+    <div class="detail-section mt-1">
+      <div class="detail-label"><%= t("invoice.due_date") %></div>
+      <div class="detail-value"><%= @invoice.due_date %></div>
+    </div>
+
+    <% if @invoice.sent? && @invoice.client.credit_card? %>
+      <div class="mt-3">
+        <%= form_with url: public_payment_create_path(params[:token]), method: :post do %>
+          <%= submit_tag(
+            t("invoice.pay_with_credit_card"),
+            class: "btn btn-accent",
+            style: "font-size: 16px; padding: 0.75rem 2rem;",
+            data: { turbo_submits_with: t("invoice.pay_with_credit_card") + "..." }
+          ) %>
+        <% end %>
+      </div>
+    <% elsif @invoice.sent? %>
+      <div class="mt-2">
+        <p class="text-muted">
+          <%= t("invoice.transfer_instructions") %>
+        </p>
+      </div>
+    <% end %>
+  </div>
+<% end %>

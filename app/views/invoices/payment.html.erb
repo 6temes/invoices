@@ -1,0 +1,7 @@
+<div class="page-header">
+  <h1>Payment date — Invoice #<%= @invoice.invoice_number %></h1>
+</div>
+
+<%= turbo_frame_tag "slideover_frame" do %>
+  <%= render "payment_form", invoice: @invoice %>
+<% end %>

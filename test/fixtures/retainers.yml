@@ -1,0 +1,26 @@
+acme_active:
+  client: acme
+  monthly_hours: 10.0
+  monthly_amount: 100000
+  hourly_rate: 10000
+  includes_infrastructure: false
+  starts_on: 2025-01-01
+  ends_on:
+
+sakura_active:
+  client: sakura
+  monthly_hours: 20.0
+  monthly_amount: 225000
+  hourly_rate: 12000
+  includes_infrastructure: true
+  starts_on: 2025-04-01
+  ends_on:
+
+fuji_active:
+  client: fuji
+  monthly_hours: 5.0
+  monthly_amount: 50000
+  hourly_rate: 10000
+  includes_infrastructure: false
+  starts_on: 2025-06-01
+  ends_on:

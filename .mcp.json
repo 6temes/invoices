@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "informant": {
+      "command": "informant-mcp"
+    }
+  }
+}

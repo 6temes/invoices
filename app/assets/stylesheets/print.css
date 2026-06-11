@@ -1,0 +1,57 @@
+@media print {
+  /* Hide UI chrome */
+  .main-nav,
+  .flash,
+  .page-header .btn-group,
+  .page-header .btn,
+  .badge-draft,
+  .badge-preparing,
+  .badge-sent,
+  .badge-failed,
+  .badge-paid {
+    display: none !important;
+  }
+
+  body {
+    font-size: 12px;
+    background: #fff;
+    color: #000;
+  }
+
+  .container {
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* A4 page settings */
+  @page {
+    size: A4;
+    margin: 15mm 20mm;
+  }
+
+  /* Prevent breaks inside tables */
+  table,
+  tr,
+  .card {
+    page-break-inside: avoid;
+  }
+
+  /* Keep totals together with table */
+  tfoot {
+    page-break-inside: avoid;
+  }
+
+  /* Remove link styling */
+  a {
+    color: #000;
+    text-decoration: none;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .card {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}

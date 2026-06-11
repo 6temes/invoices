@@ -1,0 +1,91 @@
+<div class="page-header">
+  <h1>Tax Export</h1>
+</div>
+
+<%= form_with url: tax_export_path, method: :get, class: "form-inline mb-3" do %>
+  <div class="form-group">
+    <label>Year</label>
+    <%= select_tag :year, options_for_select(@years, @year), onchange: "this.form.requestSubmit()" %>
+  </div>
+<% end %>
+
+<div class="summary-cards">
+  <div class="summary-card">
+    <div class="summary-card-label">Revenue (tax-exclusive)</div>
+    <div class="summary-card-value">¥<%= number_with_delimiter @total_subtotal %></div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-card-label">Consumption tax collected</div>
+    <div class="summary-card-value">¥<%= number_with_delimiter @total_tax %></div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-card-label">Total (tax-inclusive)</div>
+    <div class="summary-card-value">¥<%= number_with_delimiter @total_total %></div>
+  </div>
+</div>
+
+<h2>Per-Client Breakdown</h2>
+<div class="table-responsive">
+  <table>
+    <thead>
+      <tr>
+        <th>Client</th>
+        <th class="text-right">Invoices</th>
+        <th class="text-right">Subtotal</th>
+        <th class="text-right">Tax</th>
+        <th class="text-right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @by_client.sort_by { |c, _| c.name }.each do |client, data| %>
+        <tr>
+          <td><%= link_to client.name, client %></td>
+          <td class="text-right"><%= data[:count] %></td>
+          <td class="text-right currency">¥<%= number_with_delimiter data[:subtotal] %></td>
+          <td class="text-right currency">¥<%= number_with_delimiter data[:tax] %></td>
+          <td class="text-right currency">¥<%= number_with_delimiter data[:total] %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<h2 class="mt-3">Downloads</h2>
+<div class="btn-group">
+  <%= link_to "Download CSV", csv_tax_export_path(year: @year), class: "btn", download: true %>
+  <%= link_to "Download ZIP (PDFs + UBL XML)", zip_tax_export_path(year: @year), class: "btn", download: true %>
+</div>
+
+<h2 class="mt-3">Invoices</h2>
+<% if @invoices.any? %>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Invoice #</th>
+          <th>Issue Date</th>
+          <th>Client</th>
+          <th class="text-right">Subtotal</th>
+          <th class="text-right">Tax</th>
+          <th class="text-right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @invoices.each do |invoice| %>
+          <tr>
+            <td><span class="badge badge-<%= invoice.status %>"><%= invoice.status %></span></td>
+            <td><%= link_to "##{invoice.invoice_number}", invoice %></td>
+            <td><%= invoice.issue_date %></td>
+            <td><%= invoice.client.name %></td>
+            <td class="text-right currency">¥<%= number_with_delimiter invoice.subtotal %></td>
+            <td class="text-right currency">¥<%= number_with_delimiter invoice.tax_amount %></td>
+            <td class="text-right currency">¥<%= number_with_delimiter invoice.total %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <p class="text-muted">No invoices for this year.</p>
+<% end %>
