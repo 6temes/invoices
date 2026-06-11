@@ -1,0 +1,13 @@
+default:
+  name: Daniel López Prat
+  tax_registration_number: T3810701547155
+  bank_name: 三菱UFJ銀行
+  bank_code: "0005"
+  bank_branch: 東中野支店
+  bank_branch_code: "152"
+  bank_account_holder: LOPEZ PRAT DANIEL
+  bank_account_type: 普通
+  bank_account_number: "0185618"
+  email: daniel@6temes.cat
+  tax_rate: 10.0
+  next_invoice_number: 150

@@ -1,0 +1,10 @@
+<%# locals: (client:, extra_hour:) -%>
+<tr id="<%= dom_id(extra_hour) %>">
+  <td><%= extra_hour.performed_on %></td>
+  <td><%= extra_hour.description.presence || "—" %></td>
+  <td class="text-right"><%= extra_hour.hours %></td>
+  <td class="text-right">
+    <%= link_to "Edit", edit_client_extra_hour_path(client, extra_hour), class: "btn btn-sm", data: { action: "slideover#open" } %>
+    <%= button_to "Delete", client_extra_hour_path(client, extra_hour), method: :delete, class: "btn btn-sm btn-danger", data: { turbo_confirm: "Delete this entry?" } %>
+  </td>
+</tr>

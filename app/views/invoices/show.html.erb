@@ -1,0 +1,18 @@
+<%= turbo_stream_from @invoice %>
+<div data-controller="slideover" data-action="keydown@window->slideover#closeOnKeydown">
+  <div id="<%= dom_id(@invoice) %>">
+    <%= render "show_content", invoice: @invoice, business: @business %>
+  </div>
+
+  <%# Slideover for recording or correcting the payment date %>
+  <div class="slideover-backdrop" data-action="click->slideover#close"></div>
+  <div class="slideover-panel" data-slideover-target="panel" data-action="turbo:submit-end->slideover#submitEnd">
+    <div class="slideover-header">
+      <h2>Payment date</h2>
+      <button type="button" class="slideover-close" data-action="slideover#close">&times;</button>
+    </div>
+    <div class="slideover-body">
+      <turbo-frame id="slideover_frame" data-slideover-target="frame"></turbo-frame>
+    </div>
+  </div>
+</div>

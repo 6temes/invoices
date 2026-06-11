@@ -1,0 +1,91 @@
+# Name of your application. Used to uniquely configure containers.
+service: invoices
+
+# Name of the container image.
+image: dlopez/invoices
+
+# Deploy to these servers.
+servers:
+  web:
+    - <%= ENV["DEPLOY_HOST"] %>
+
+ssh:
+  user: deploy
+  port: <%= ENV["DEPLOY_SSH_PORT"] %>
+
+# All traffic arrives via Cloudflare Tunnel (encrypted end-to-end).
+# Tunnel connects to kamal-proxy over HTTP on localhost.
+proxy:
+  host: invoices.6temes.cat
+
+# Where you keep your container images.
+registry:
+  server: localhost:5555
+
+# Inject ENV variables into containers (secrets come from .kamal/secrets).
+env:
+  secret:
+    - RAILS_MASTER_KEY
+  clear:
+    APP_HOST: invoices.6temes.cat
+    GZIP_COMPRESSION_ENABLED: false
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://<%= ENV["WG_MAINFRAME_IP"] %>:4318
+    OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+    OTEL_TRACES_SAMPLER: always_on
+    PROMETHEUS_COLLECTOR_HOST: invoices-prometheus-exporter
+    SOLID_QUEUE_IN_PUMA: true
+
+# Litestream continuously replicates SQLite databases to mainframe via SFTP.
+# Runs as a separate container so deploys don't interrupt replication.
+accessories:
+  prometheus-exporter:
+    image: localhost:5555/dlopez/invoices:latest
+    host: <%= ENV["DEPLOY_HOST"] %>
+    port: "<%= ENV["METRICS_BIND_IP"] %>:9394:9394"
+    cmd: bundle exec prometheus_exporter --prefix ruby_ --histogram --bind 0.0.0.0 --port 9394
+
+  litestream:
+    # Pinned digest + run as root (numeric UID — the image is FROM scratch with no passwd,
+    # so "root" by name won't resolve). litestream/litestream:latest switched its default user
+    # to nonroot, which can't read the 0600 deploy-owned SFTP key (/etc/litestream/sftp_key)
+    # or /root/.ssh/known_hosts — that silently broke replication on 2026-06-02. Root restores
+    # the prior behavior; the digest stops :latest from surprising us again.
+    image: litestream/litestream@sha256:5572700ba18710cb010a0e415e36abf5cc0b4d74a2ad7b6d6a387142c0c99604
+    options:
+      user: "0:0"
+    host: <%= ENV["DEPLOY_HOST"] %>
+    port: "<%= ENV["METRICS_BIND_IP"] %>:9090:9090"
+    env:
+      clear:
+        LITESTREAM_SFTP_HOST: <%= ENV["WG_MAINFRAME_IP"] %>:22
+        LITESTREAM_SFTP_USER: <%= ENV["LITESTREAM_SFTP_USER"] %>
+    volumes:
+      - "invoices_storage:/rails/storage"
+      - "/home/deploy/.ssh/litestream_ed25519:/etc/litestream/sftp_key:ro"
+      - "/home/deploy/.ssh/litestream_known_hosts:/root/.ssh/known_hosts:ro"
+    files:
+      - config/litestream.yml:/etc/litestream.yml
+    cmd: replicate -config /etc/litestream.yml
+
+# Aliases are triggered with "bin/kamal <alias>".
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  dbc: app exec --interactive --reuse "bin/rails dbconsole --include-password"
+  logs: app logs -f
+  shell: app exec --interactive --reuse "bash"
+
+# Use a persistent storage volume for sqlite database files and local Active Storage files.
+volumes:
+  - "invoices_storage:/rails/storage"
+
+# Bridge fingerprinted assets between versions to avoid 404 on in-flight requests.
+asset_path: /rails/public/assets
+
+# Configure the image builder.
+builder:
+  arch: amd64
+  cache:
+    type: gha
+    options: mode=max
+  args:
+    GIT_SHA: <%= `git rev-parse HEAD`.strip %>

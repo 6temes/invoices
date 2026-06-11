@@ -1,0 +1,34 @@
+<div class="page-header">
+  <h1><%= @retainer.subject %></h1>
+  <div class="btn-group">
+    <%= link_to "Edit", edit_client_retainer_path(@client, @retainer), class: "btn" %>
+    <%= link_to "Back to client", client_path(@client), class: "btn" %>
+  </div>
+</div>
+
+<div class="detail-grid">
+  <div>
+    <div class="detail-section">
+      <div class="detail-label">Monthly amount</div>
+      <div class="detail-value currency">¥<%= number_with_delimiter @retainer.monthly_amount %></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Monthly hours</div>
+      <div class="detail-value"><%= @retainer.monthly_hours %></div>
+    </div>
+  </div>
+  <div>
+    <div class="detail-section">
+      <div class="detail-label">Hourly rate (extras)</div>
+      <div class="detail-value currency">¥<%= number_with_delimiter @retainer.hourly_rate %></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Includes infrastructure</div>
+      <div class="detail-value"><%= @retainer.includes_infrastructure? ? "Yes" : "No" %></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Period</div>
+      <div class="detail-value"><%= @retainer.starts_on %> — <%= @retainer.ends_on || "present" %></div>
+    </div>
+  </div>
+</div>

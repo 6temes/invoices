@@ -1,0 +1,66 @@
+<%# locals: (client:) -%>
+<%= form_with model: client do |f| %>
+  <% if client.errors.any? %>
+    <div class="form-errors">
+      <strong><%= pluralize(client.errors.count, "error") %> prevented saving:</strong>
+      <ul>
+        <% client.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-group">
+    <%= f.label :name, "Company name" %>
+    <%= f.text_field :name %>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :contact_name, "Contact name" %>
+      <%= f.text_field :contact_name %>
+    </div>
+    <div class="form-group">
+      <%= f.label :email %>
+      <%= f.email_field :email %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :locale, "Language" %>
+      <%= f.select :locale, [["English", "en"], ["日本語", "ja"]] %>
+    </div>
+    <div class="form-group">
+      <%= f.label :payment_method %>
+      <%= f.select :payment_method, [["Bank transfer", "bank_transfer"], ["Credit card", "credit_card"]] %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :payment_terms_days, "Payment terms (days)" %>
+      <%= f.number_field :payment_terms_days %>
+    </div>
+    <div class="form-group">
+      <%= f.label :tax_registration_number, "Tax registration number" %>
+      <%= f.text_field :tax_registration_number, placeholder: "e.g. T1234567890123" %>
+    </div>
+  </div>
+
+  <h3 class="mt-2">Address (optional)</h3>
+  <%= f.fields_for :address, (client.address || client.build_address(country_code: "JP")) do |a| %>
+    <%= render "addresses/fields", form: a, address: a.object %>
+  <% end %>
+
+  <h3 class="mt-2">GitHub Repos</h3>
+  <div class="form-group">
+    <%= f.label :github_repos_text, "One repo per line (e.g. org/repo)" %>
+    <%= f.text_area :github_repos_text, value: client.github_repos.join("\n"), rows: 4 %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.submit "Save", class: "btn btn-primary", data: { turbo_submits_with: "Saving..." } %>
+    <%= link_to "Cancel", client.persisted? ? client_path(client) : clients_path, class: "btn" %>
+  </div>
+<% end %>

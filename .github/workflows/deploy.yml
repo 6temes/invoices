@@ -1,0 +1,148 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      deployments: write
+
+    env:
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+      WG_MAINFRAME_IP: ${{ secrets.WG_MAINFRAME_IP }}
+      METRICS_BIND_IP: ${{ secrets.METRICS_BIND_IP }}
+      LITESTREAM_SFTP_USER: ${{ secrets.LITESTREAM_SFTP_USER }}
+
+    steps:
+      - name: Create GitHub deployment
+        id: deployment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: process.env.DEPLOY_SHA,
+              environment: 'production',
+              auto_merge: false,
+              required_contexts: [],
+              description: `Deploy ${process.env.DEPLOY_SHA.slice(0, 7)} to production`
+            });
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.data.id,
+              state: 'in_progress',
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            });
+            core.setOutput('deployment_id', deployment.data.id);
+
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@afeafc3d1ab54a631816aba4c914a0081c12ff2f # v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Install Kamal
+        run: gem install kamal
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Expose GitHub Actions cache for Docker
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 # v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Configure SSH
+        run: |
+          ssh-keyscan -p "$DEPLOY_SSH_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          printf '%s\n' \
+            "Host $DEPLOY_HOST" \
+            "  Port $DEPLOY_SSH_PORT" \
+            "  ServerAliveInterval 15" \
+            "  ServerAliveCountMax 4" \
+            >> ~/.ssh/config
+
+      - name: Deploy
+        id: deploy
+        run: kamal deploy
+        continue-on-error: true # Prune can fail non-fatally (basecamp/kamal#1799)
+
+      - name: Verify deployment
+        run: ssh "deploy@$DEPLOY_HOST" "docker ps --filter label=service=invoices --filter status=running --format '{{.Names}}'" | grep -q "${{ env.DEPLOY_SHA }}"
+
+      - name: Mark deployment successful
+        if: success()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ steps.deployment.outputs.deployment_id }},
+              state: 'success',
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              environment_url: 'https://invoices.6temes.cat'
+            });
+
+      - name: Mark deployment failed
+        if: failure() && steps.deployment.outputs.deployment_id
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ steps.deployment.outputs.deployment_id }},
+              state: 'failure',
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            });
+
+      - name: Notify Slack (success)
+        if: success()
+        run: |
+          if [ -z "$SLACK_DEPLOY_SUCCESS_WEBHOOK" ]; then
+            echo "SLACK_DEPLOY_SUCCESS_WEBHOOK not set; skipping notification"; exit 0
+          fi
+          curl -sS -X POST -H 'Content-type: application/json' \
+            --data '{"text":"✅ Deploy successful for invoices"}' \
+            "$SLACK_DEPLOY_SUCCESS_WEBHOOK"
+        env:
+          SLACK_DEPLOY_SUCCESS_WEBHOOK: ${{ secrets.SLACK_DEPLOY_SUCCESS_WEBHOOK }}
+
+      - name: Notify Slack (failure)
+        if: failure()
+        run: |
+          if [ -z "$SLACK_DEPLOY_FAILURE_WEBHOOK" ]; then
+            echo "SLACK_DEPLOY_FAILURE_WEBHOOK not set; skipping notification"; exit 0
+          fi
+          curl -sS -X POST -H 'Content-type: application/json' \
+            --data '{"text":"❌ Deploy FAILED for invoices"}' \
+            "$SLACK_DEPLOY_FAILURE_WEBHOOK"
+        env:
+          SLACK_DEPLOY_FAILURE_WEBHOOK: ${{ secrets.SLACK_DEPLOY_FAILURE_WEBHOOK }}

@@ -1,0 +1,29 @@
+acme:
+  name: Acme Corp.
+  contact_name: John Smith
+  email: billing@acme.example.com
+  locale: en
+  payment_method: bank_transfer
+  payment_terms_days: 30
+  stripe_customer_id:
+  github_repos: '["acme/web-app", "acme/api"]'
+
+sakura:
+  name: 桜テクノロジー株式会社
+  contact_name: 田中太郎
+  email: keiri@sakura.example.jp
+  locale: ja
+  payment_method: credit_card
+  payment_terms_days: 15
+  stripe_customer_id: cus_test_sakura123
+  github_repos: '["sakura-tech/portal"]'
+
+fuji:
+  name: Fuji Design LLC
+  contact_name: Yuki Tanaka
+  email: accounts@fuji.example.com
+  locale: en
+  payment_method: bank_transfer
+  payment_terms_days: 30
+  stripe_customer_id:
+  github_repos: '["fuji-design/website"]'

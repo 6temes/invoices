@@ -1,0 +1,10 @@
+<%# locals: (invoice:) -%>
+<tr id="<%= dom_id(invoice) %>">
+  <td><span class="badge badge-<%= invoice.status %>"><%= invoice.status %></span></td>
+  <td><%= invoice.issue_date %></td>
+  <td><%= link_to "##{invoice.invoice_number}", invoice %></td>
+  <td><%= link_to invoice.client.name, invoice.client %></td>
+  <td class="text-right currency">¥<%= number_with_delimiter invoice.total %></td>
+  <td class="text-right currency">¥<%= number_with_delimiter invoice.paid_amount %></td>
+  <td class="text-right currency">¥<%= number_with_delimiter(invoice.total - invoice.paid_amount) %></td>
+</tr>

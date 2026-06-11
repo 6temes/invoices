@@ -1,0 +1,132 @@
+<%# locals: (invoice:, clients:) -%>
+<%= form_with model: invoice, data: { controller: "line-items" } do |f| %>
+  <% if invoice.errors.any? %>
+    <div class="form-errors">
+      <strong><%= pluralize(invoice.errors.count, "error") %> prevented saving:</strong>
+      <ul>
+        <% invoice.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :client_id, "Client" %>
+      <%= f.collection_select :client_id, clients, :id, :name, { prompt: "Select a client" } %>
+    </div>
+    <div class="form-group">
+      <%= f.label :locale, "Language" %>
+      <%= f.select :locale, [["English", "en"], ["日本語", "ja"]] %>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <%= f.label :billing_month %>
+    <%= f.date_field :billing_month %>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :issue_date %>
+      <%= f.date_field :issue_date %>
+    </div>
+    <div class="form-group">
+      <%= f.label :due_date %>
+      <%= f.date_field :due_date %>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <%= f.label :tax_rate, "Tax rate (%)" %>
+    <%= f.number_field :tax_rate, step: 0.1, data: { action: "input->line-items#recalculate" } %>
+  </div>
+
+  <h3 class="mt-2">Line Items</h3>
+  <div data-line-items-target="container" data-action="input->line-items#recalculate">
+    <%= f.fields_for :line_items do |li| %>
+      <div class="card mb-1" data-line-items-target="item">
+        <div class="form-row">
+          <div class="form-group">
+            <%= li.label :item_type %>
+            <%= li.text_field :item_type, value: li.object.item_type || "Service" %>
+          </div>
+          <div class="form-group">
+            <%= li.label :description %>
+            <%= li.text_field :description %>
+          </div>
+        </div>
+        <div class="form-inline">
+          <div class="form-group">
+            <%= li.label :quantity %>
+            <%= li.number_field :quantity, step: 0.25 %>
+          </div>
+          <div class="form-group">
+            <%= li.label :unit_price, "Unit price (¥)" %>
+            <%= li.number_field :unit_price %>
+          </div>
+          <div>
+            <%= li.hidden_field :_destroy, value: "0", data: { "line-items-target": "destroyField" } %>
+            <button type="button" class="btn btn-sm btn-danger" data-action="line-items#remove">Remove</button>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <template data-line-items-target="template">
+    <div class="card mb-1" data-line-items-target="item">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Item type</label>
+          <input type="text" name="invoice[line_items_attributes][NEW_INDEX][item_type]" value="Service">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" name="invoice[line_items_attributes][NEW_INDEX][description]">
+        </div>
+      </div>
+      <div class="form-inline">
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" step="0.25" name="invoice[line_items_attributes][NEW_INDEX][quantity]" value="1">
+        </div>
+        <div class="form-group">
+          <label>Unit price (¥)</label>
+          <input type="number" name="invoice[line_items_attributes][NEW_INDEX][unit_price]">
+        </div>
+        <div>
+          <button type="button" class="btn btn-sm btn-danger" data-action="line-items#remove">Remove</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <button type="button" class="btn btn-sm mt-1" data-action="line-items#add">+ Add line item</button>
+
+  <div class="line-items-totals">
+    <div class="line-items-total-row">
+      <span>Subtotal</span>
+      <span class="currency" data-line-items-target="subtotal">¥0</span>
+    </div>
+    <div class="line-items-total-row">
+      <span>Tax</span>
+      <span class="currency" data-line-items-target="taxAmount">¥0</span>
+    </div>
+    <div class="line-items-total-row total">
+      <span>Total</span>
+      <span class="currency" data-line-items-target="total">¥0</span>
+    </div>
+  </div>
+
+  <h3 class="mt-2">Notes</h3>
+  <div class="form-group">
+    <%= f.text_area :notes, rows: 5, placeholder: "Payment instructions..." %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.submit "Save", class: "btn btn-primary", data: { turbo_submits_with: "Saving..." } %>
+    <%= link_to "Cancel", invoice.persisted? ? invoice_path(invoice) : invoices_path, class: "btn" %>
+  </div>
+<% end %>

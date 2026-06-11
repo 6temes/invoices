@@ -1,0 +1,17 @@
+<p><%= t("invoice_mailer.send_invoice.greeting", client_name: @client.name) %></p>
+<% if I18n.locale == :ja %>
+  <p><%= t("invoice_mailer.send_invoice.opening") %></p>
+<% end %>
+<p><%= t("invoice_mailer.send_invoice.body", number: @invoice.invoice_number, total: number_with_delimiter(@invoice.total), invoice_subject: @invoice.subject.downcase, period: @period) %></p>
+<p><%= t("invoice_mailer.send_invoice.due_date", date: @invoice.due_date) %></p>
+<% if @client.credit_card? && @payment_url %>
+  <p><%= t("invoice_mailer.send_invoice.stripe_instructions", link: @payment_url) %></p>
+<% else %>
+  <p><%= t("invoice_mailer.send_invoice.bank_instructions") %></p>
+<% end %>
+<p><%= t("invoice_mailer.send_invoice.closing") %></p>
+<% if I18n.locale != :ja %>
+  <p><%= t("invoice_mailer.send_invoice.signature") %><br><%= @business.name %></p>
+<% else %>
+  <p><%= @business.name %></p>
+<% end %>

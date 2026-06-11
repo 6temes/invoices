@@ -1,0 +1,11 @@
+<%= turbo_stream.append "invoices" do %>
+  <%= render partial: "invoices/invoice_row", collection: @invoices, as: :invoice %>
+<% end %>
+
+<% if @page.last? %>
+  <%= turbo_stream.remove "page_#{params[:page]}" %>
+<% else %>
+  <%= turbo_stream.replace "page_#{params[:page]}" do %>
+    <%= render "invoices/next_page" %>
+  <% end %>
+<% end %>

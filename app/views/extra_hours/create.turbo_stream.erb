@@ -1,0 +1,7 @@
+<%= turbo_stream.prepend "unbilled_extra_hours" do %>
+  <%= render "extra_hours/extra_hour_row", client: @client, extra_hour: @extra_hour %>
+<% end %>
+
+<%= turbo_stream.prepend "flash_messages" do %>
+  <%= render "shared/flash", type: :notice, message: "Extra hours logged." %>
+<% end %>

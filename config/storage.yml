@@ -1,0 +1,21 @@
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+r2:
+  service: S3
+  access_key_id: <%= Rails.application.credentials.dig(:cloudflare, :r2_access_key_id) %>
+  secret_access_key: <%= Rails.application.credentials.dig(:cloudflare, :r2_secret_access_key) %>
+  endpoint: https://<%= Rails.application.credentials.dig(:cloudflare, :account_id) %>.r2.cloudflarestorage.com
+  bucket: invoices-storage
+  region: auto
+  request_checksum_calculation: when_required
+
+production:
+  service: Mirror
+  primary: local
+  mirrors: [r2]

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$APP_ROOT"
+
+UBL_XSD_URL="https://docs.oasis-open.org/ubl/os-UBL-2.1/xsd"
+
+echo "== Fetching UBL validation assets =="
+
+mkdir -p vendor/schematron vendor/validators vendor/xsd/maindoc vendor/xsd/common
+
+echo "Downloading UBL 2.1 XSD schemas..."
+curl -sfL "${UBL_XSD_URL}/maindoc/UBL-Invoice-2.1.xsd" -o vendor/xsd/maindoc/UBL-Invoice-2.1.xsd || echo "  Warning: failed to download UBL-Invoice-2.1.xsd"
+for file in \
+  UBL-CommonAggregateComponents-2.1.xsd \
+  UBL-CommonBasicComponents-2.1.xsd \
+  UBL-CommonExtensionComponents-2.1.xsd \
+  UBL-QualifiedDataTypes-2.1.xsd \
+  UBL-UnqualifiedDataTypes-2.1.xsd \
+  CCTS_CCT_SchemaModule-2.1.xsd
+do
+  if [ ! -f "vendor/xsd/common/$file" ]; then
+    curl -sfL "${UBL_XSD_URL}/common/${file}" -o "vendor/xsd/common/$file" || echo "  Warning: failed to download $file"
+  fi
+done
+
+echo "Downloading JP PINT Schematron rules..."
+PINT_BASE="https://raw.githubusercontent.com/OpenPEPPOL/billing-japan/main/rules/sch"
+curl -sfL "${PINT_BASE}/PINT-UBL-validation-preprocessed.sch" -o vendor/schematron/PINT-UBL-validation-preprocessed.sch 2>/dev/null || true
+
+echo "Downloading ph-schematron CLI (requires Java to run)..."
+PH_VERSION="8.0.3"
+curl -sfL "https://github.com/phax/ph-schematron/releases/download/ph-schematron-parent-pom-${PH_VERSION}/ph-schematron-cli-${PH_VERSION}.jar" \
+  -o vendor/validators/ph-schematron-cli.jar 2>/dev/null || true
+
+echo ""
+echo "UBL assets fetched."
+echo "  XSD schemas:  vendor/xsd/ (maindoc + common)"
+echo "  Schematron:   vendor/schematron/ (optional — requires manual download if URLs change)"
+echo "  Validator:    vendor/validators/ (optional — requires Java runtime)"

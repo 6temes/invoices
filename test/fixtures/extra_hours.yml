@@ -1,0 +1,21 @@
+acme_unbilled_with_desc:
+  client: acme
+  invoice_line_item:
+  description: "#1421 — Change default locale to en-GB"
+  hours: 0.5
+  performed_on: 2026-02-20
+  github_url: https://github.com/acme/web-app/issues/1421
+
+acme_unbilled_generic:
+  client: acme
+  invoice_line_item:
+  description:
+  hours: 2.0
+  performed_on: 2026-02-22
+
+acme_billed:
+  client: acme
+  invoice_line_item: acme_january_retainer
+  description: "Bug fix for checkout"
+  hours: 1.0
+  performed_on: 2026-01-15

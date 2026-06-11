@@ -1,0 +1,28 @@
+<%# locals: (address:, object_name:, address_id: nil) -%>
+<turbo-frame id="address-country-fields" data-country-selector-target="frame">
+  <%= fields_for object_name, address do |f| %>
+    <%= hidden_field_tag "#{object_name}[id]", address_id if address_id.present? %>
+    <div class="form-group">
+      <%= f.label :street, "Address line 1" %>
+      <%= f.text_field :street %>
+    </div>
+    <div class="form-group">
+      <%= f.label :extended, "Address line 2" %>
+      <%= f.text_field :extended %>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <%= f.label :locality, "City" %>
+        <%= f.text_field :locality %>
+      </div>
+      <div class="form-group">
+        <%= f.label :administrative_area, "State / Province" %>
+        <%= f.text_field :administrative_area %>
+      </div>
+    </div>
+    <div class="form-group">
+      <%= f.label :postal_code, "Postal code" %>
+      <%= f.text_field :postal_code %>
+    </div>
+  <% end %>
+</turbo-frame>

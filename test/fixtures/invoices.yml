@@ -1,0 +1,44 @@
+acme_january:
+  client: acme
+  invoice_number: 145
+  locale: en
+  billing_month: 2026-01-01
+  issue_date: 2026-02-01
+  due_date: 2026-03-03
+  status: paid
+  subtotal: 100000
+  tax_rate: 10.0
+  tax_amount: 10000
+  total: 110000
+  paid_amount: 110000
+  paid_on: 2026-02-15
+  sent_at: 2026-02-01 09:00:00
+
+acme_february_draft:
+  client: acme
+  invoice_number: 148
+  locale: en
+  billing_month: 2026-02-01
+  issue_date: 2026-03-01
+  due_date: 2026-03-31
+  status: draft
+  subtotal: 100000
+  tax_rate: 10.0
+  tax_amount: 10000
+  total: 110000
+  paid_amount: 0
+
+sakura_january:
+  client: sakura
+  invoice_number: 146
+  locale: ja
+  billing_month: 2026-01-01
+  issue_date: 2026-02-01
+  due_date: 2026-02-16
+  status: sent
+  subtotal: 225000
+  tax_rate: 10.0
+  tax_amount: 22500
+  total: 247500
+  paid_amount: 0
+  sent_at: 2026-02-01 09:00:00

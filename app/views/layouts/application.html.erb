@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Invoices" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Invoices">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <% if authenticated? %>
+      <nav class="main-nav" data-controller="toggle" data-action="turbo:before-visit@window->toggle#close turbo:submit-start@window->toggle#close">
+        <div class="nav-container">
+          <div class="nav-brand">
+            <%= link_to "Invoices", root_path, class: "nav-logo" %>
+          </div>
+          <button class="nav-toggle" data-action="toggle#toggle" aria-label="Menu">
+            <span class="nav-toggle-icon"></span>
+          </button>
+          <div class="nav-menu" data-toggle-target="content">
+            <div class="nav-links">
+              <%= link_to "Invoices", invoices_path, class: "nav-link #{"active" if controller_name == "invoices"}" %>
+              <%= link_to "Clients", clients_path, class: "nav-link #{"active" if controller_name == "clients"}" %>
+              <%= link_to "Tax Export", tax_export_path, class: "nav-link #{"active" if controller_name == "tax_exports"}" %>
+            </div>
+            <div class="nav-actions">
+              <%= link_to "Settings", edit_business_path, class: "nav-link #{"active" if controller_name == "businesses"}" %>
+              <%= button_to "Log out", session_path, method: :delete, class: "nav-link nav-logout" %>
+            </div>
+          </div>
+        </div>
+      </nav>
+    <% end %>
+
+    <main class="container">
+      <div id="flash_messages">
+        <% if flash[:notice] %>
+          <%= render "shared/flash", type: :notice, message: flash[:notice] %>
+        <% end %>
+        <% if flash[:alert] %>
+          <%= render "shared/flash", type: :alert, message: flash[:alert] %>
+        <% end %>
+      </div>
+
+      <%= yield %>
+    </main>
+
+    <footer class="site-footer">
+      <p>Made in Tokyo with ❤️ and 🤖</p>
+    </footer>
+  </body>
+</html>

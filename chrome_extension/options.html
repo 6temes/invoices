@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Invoice Hours Logger — Settings</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 480px;
+      margin: 40px auto;
+      padding: 0 20px;
+      font-size: 14px;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 20px; margin-bottom: 24px; }
+    label { display: block; font-weight: 500; margin: 12px 0 4px; font-size: 13px; }
+    input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #111827;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover { background: #374151; }
+    .status { margin-top: 12px; color: #059669; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Invoice Hours Logger</h1>
+
+  <label for="apiUrl">API URL</label>
+  <input type="url" id="apiUrl" placeholder="https://invoices.6temes.cat">
+
+  <label for="apiToken">API Token</label>
+  <input type="password" id="apiToken" placeholder="Your API token">
+
+  <button id="save">Save</button>
+  <div class="status" id="status"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

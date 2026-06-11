@@ -1,0 +1,52 @@
+<%# locals: (client:, retainer:) -%>
+<%= form_with model: [client, retainer] do |f| %>
+  <% if retainer.errors.any? %>
+    <div class="form-errors">
+      <strong><%= pluralize(retainer.errors.count, "error") %> prevented saving:</strong>
+      <ul>
+        <% retainer.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :monthly_amount, "Monthly amount (¥)" %>
+      <%= f.number_field :monthly_amount %>
+    </div>
+    <div class="form-group">
+      <%= f.label :monthly_hours %>
+      <%= f.number_field :monthly_hours, step: 0.5 %>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :hourly_rate, "Hourly rate for extras (¥)" %>
+      <%= f.number_field :hourly_rate %>
+    </div>
+    <div class="form-group">
+      <%= f.label :starts_on, "Start date" %>
+      <%= f.date_field :starts_on %>
+    </div>
+  </div>
+
+  <% if retainer.persisted? %>
+    <div class="form-group">
+      <%= f.label :ends_on, "End date (leave blank if active)" %>
+      <%= f.date_field :ends_on %>
+    </div>
+  <% end %>
+
+  <div class="form-group">
+    <%= f.check_box :includes_infrastructure %>
+    <%= f.label :includes_infrastructure, "Includes server infrastructure (hosting, monitoring, backups)" %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.submit "Save", class: "btn btn-primary", data: { turbo_submits_with: "Saving..." } %>
+    <%= link_to "Cancel", client_path(client), class: "btn" %>
+  </div>
+<% end %>

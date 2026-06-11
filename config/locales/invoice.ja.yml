@@ -1,0 +1,57 @@
+ja:
+  invoice:
+    document_title: 請求書
+    from: 発行者
+    for: 請求先
+    id: 請求書番号
+    issue_date: 発行日
+    due_date: 支払期限
+    subject: ソフトウェア開発
+    subject_label: 件名
+    item_type: 項目
+    item_types:
+      service: サービス
+    description: 内容
+    quantity: 数量
+    unit_price: 単価
+    amount: 金額
+    subtotal: 小計
+    tax: "消費税（%{rate}%）"
+    total: 合計
+    amount_due: 請求金額
+    paid_stamp: 支払済
+    notes: 備考
+    paid_on: "支払日"
+    paid_amount: "支払額"
+    registration_number: 登録番号
+    payment_terms: "%{days}日以内"
+    bank_transfer_instructions: "下記口座へお振込みください："
+    bank_name: 銀行名
+    bank_branch: 支店名
+    bank_account_holder: 口座名義
+    bank_account_type: 口座種別
+    bank_account_number: 口座番号
+    pay_with_credit_card: クレジットカードで支払う
+    payment_error: "お支払い処理中にエラーが発生しました。数分後にもう一度お試しください。"
+    transfer_instructions: お振込み先は請求書に記載の通りです。
+    page_numbering: "%{page} / %{total} ページ"
+    retainer_subject: ウェブ開発・保守
+    retainer_subject_with_infrastructure: ウェブ開発・保守・サーバーインフラ
+    retainer_line: "%{subject}の月額リテイナー（%{hours}時間含む） — %{period}"
+    extra_hours_with_desc: "追加開発: %{description}（%{hours}時間）"
+    extra_hours_generic: "リテイナー超過分の追加開発（%{hours}時間）"
+    month_year: "%{year}年%{month}月"
+    payments: お支払い
+    thank_you_title: お支払いありがとうございます
+    thank_you_body: "請求書 #%{number} のお支払いを確認いたしました。"
+
+  invoice_mailer:
+    send_invoice:
+      subject: "請求書 #%{number} — %{invoice_subject}"
+      greeting: "%{client_name} 御中"
+      opening: いつもお世話になっております。
+      body: "%{period}分のご請求書（#%{number}、¥%{total}）を添付にてお送りいたします。"
+      due_date: "お支払い期限は%{date}となっております。"
+      bank_instructions: お振込み先は請求書に記載の通りです。
+      stripe_instructions: "クレジットカードでのお支払いはこちらからお願いいたします：%{link}"
+      closing: 引き続きどうぞよろしくお願いいたします。

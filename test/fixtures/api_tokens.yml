@@ -1,0 +1,7 @@
+<% token_digest = Digest::SHA256.hexdigest("test_token_abc123") %>
+
+chrome_extension:
+  user: daniel
+  token_digest: <%= token_digest %>
+  name: Chrome extension
+  last_used_at: 2026-02-20 10:00:00

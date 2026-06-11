@@ -1,0 +1,25 @@
+<%# locals: (invoice:) -%>
+<% editing = invoice.paid? -%>
+<%= form_with url: (editing ? update_payment_invoice_path(invoice) : mark_as_paid_invoice_path(invoice)),
+              method: (editing ? :patch : :post), data: { turbo_frame: "_top" } do %>
+  <% if invoice.errors.any? %>
+    <div class="form-errors">
+      <strong><%= pluralize(invoice.errors.count, "error") %> prevented saving:</strong>
+      <ul>
+        <% invoice.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-group">
+    <%= label_tag :paid_on, "Paid on" %>
+    <%= date_field_tag :paid_on, (invoice.paid_on || Date.current), required: true, min: invoice.issue_date, max: Date.current %>
+  </div>
+
+  <div class="form-actions">
+    <%= submit_tag(editing ? "Save" : "Confirm payment", class: "btn btn-accent", data: { turbo_submits_with: "Saving..." }) %>
+    <%= link_to "Cancel", invoice_path(invoice), class: "btn", data: { turbo_frame: "_top", action: "slideover#close" } %>
+  </div>
+<% end %>

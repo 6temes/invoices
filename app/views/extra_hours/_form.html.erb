@@ -1,0 +1,39 @@
+<%# locals: (client:, extra_hour:) -%>
+<%= form_with model: [client, extra_hour] do |f| %>
+  <% if extra_hour.errors.any? %>
+    <div class="form-errors">
+      <strong><%= pluralize(extra_hour.errors.count, "error") %> prevented saving:</strong>
+      <ul>
+        <% extra_hour.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-row">
+    <div class="form-group">
+      <%= f.label :performed_on, "Date" %>
+      <%= f.date_field :performed_on %>
+    </div>
+    <div class="form-group">
+      <%= f.label :hours %>
+      <%= f.number_field :hours, step: 0.25, min: 0.25 %>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <%= f.label :description, "Description (optional — ticket reference)" %>
+    <%= f.text_field :description, placeholder: "#1421 — Change default locale to en-GB" %>
+  </div>
+
+  <div class="form-group">
+    <%= f.label :github_url, "GitHub URL (optional)" %>
+    <%= f.url_field :github_url, placeholder: "https://github.com/org/repo/issues/1421" %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.submit "Save", class: "btn btn-primary", data: { turbo_submits_with: "Saving..." } %>
+    <%= link_to "Cancel", client_path(client), class: "btn", data: { turbo_frame: "_top", action: "slideover#close" } %>
+  </div>
+<% end %>
