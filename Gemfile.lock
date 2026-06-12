@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/basecamp/geared_pagination.git
-  revision: e064ee752a6b513829520789e449aedf0e277bfd
+  revision: 4956ae3f5d1464cf143c157ffc4f7ebed9bfcf82
   specs:
     geared_pagination (1.2.0)
       activesupport (>= 5.0)
