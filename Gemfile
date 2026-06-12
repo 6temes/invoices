@@ -42,7 +42,7 @@ gem "stripe"
 # ZIP archive generation for tax export PDF bundles
 gem "rubyzip", require: "zip"
 # Pagination with infinite scroll support
-gem "geared_pagination", github: "basecamp/geared_pagination"
+gem "geared_pagination"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
