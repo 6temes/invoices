@@ -7,7 +7,13 @@ image: dlopez/invoices
 # Deploy to these servers.
 servers:
   web:
-    - <%= ENV["DEPLOY_HOST"] %>
+    hosts:
+      - <%= ENV["DEPLOY_HOST"] %>
+    options:
+      # Cap the container so a runaway invoices process (leak, big report)
+      # is OOM-killed alone instead of taking down the 3.8 GB host and its
+      # neighbours (hydra, kamal-proxy). Matches hydra's limit.
+      memory: 1g
 
 ssh:
   user: deploy
