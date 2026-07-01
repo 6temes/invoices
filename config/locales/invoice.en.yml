@@ -65,3 +65,10 @@ en:
       intro: "Just a friendly reminder that invoice #%{number} for %{period} is still awaiting payment. The details are below."
       closing: "If you have already sent payment, please disregard this message — and thank you."
       signature: "Best regards,"
+    send_receipt:
+      subject: "Payment received: invoice #%{number} — %{invoice_subject}"
+      preheader: "Payment received for invoice #%{number} — thank you!"
+      greeting: "Hi %{client_name},"
+      intro: "Thank you — we have received your payment for invoice #%{number}. This email confirms it for your records."
+      closing: "Thank you for your business."
+      signature: "Best regards,"

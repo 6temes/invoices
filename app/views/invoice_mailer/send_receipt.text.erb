@@ -1,0 +1,20 @@
+<%= t(".greeting", client_name: @client.name) %>
+<% opening = t(".opening", default: "") -%>
+<% if opening.present? -%>
+<%= opening %>
+<% end -%>
+<%= t(".intro", number: @invoice.invoice_number) %>
+
+<%= render "amount_summary",
+      number: @invoice.invoice_number,
+      amount: @invoice.paid_amount,
+      amount_label: t("invoice.paid_amount"),
+      date_label: t("invoice.paid_on"),
+      date: @invoice.paid_on -%>
+
+<%= t(".closing") %>
+<% signature = t(".signature", default: "") -%>
+<% if signature.present? -%>
+<%= signature %>
+<% end -%>
+<%= @business.name %>

@@ -49,6 +49,22 @@ class InvoiceMailer < ApplicationMailer
     end
   end
 
+  def send_receipt(invoice)
+    @invoice = invoice
+    @business = Business.instance
+    @client = invoice.client
+
+    I18n.with_locale(invoice.locale) do
+      @preheader = t("invoice_mailer.send_receipt.preheader", number: invoice.invoice_number)
+
+      mail(
+        to: @client.email_with_name,
+        bcc: @business.email,
+        subject: default_i18n_subject(number: invoice.invoice_number, invoice_subject: invoice.subject)
+      )
+    end
+  end
+
   private
 
   def payment_url_for(invoice)

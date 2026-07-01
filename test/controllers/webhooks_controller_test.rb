@@ -2,6 +2,8 @@ require "test_helper"
 require "ostruct"
 
 class WebhooksControllerTest < ActionDispatch::IntegrationTest
+  include ActionMailer::TestHelper
+
   setup do
     @invoice = invoices(:sakura_january)
     @invoice.pdf.attach io: StringIO.new("%PDF-1.4"), filename: "test.pdf", content_type: "application/pdf"
@@ -28,6 +30,46 @@ class WebhooksControllerTest < ActionDispatch::IntegrationTest
     assert_equal @invoice.total, @invoice.paid_amount
     assert_equal "cs_test_123", @invoice.stripe_checkout_session_id
     assert_equal "pi_test_456", @invoice.stripe_payment_intent_id
+  end
+
+  test "successful checkout enqueues exactly one receipt email" do
+    event = build_stripe_event(
+      type: "checkout.session.completed",
+      invoice_id: @invoice.id,
+      currency: "jpy",
+      amount_total: @invoice.total,
+      session_id: "cs_receipt_1",
+      payment_intent: "pi_receipt_1"
+    )
+
+    assert_enqueued_emails 1 do
+      stub_stripe_construct_event(event) do
+        post webhooks_stripe_path, params: "{}", headers: stripe_headers
+      end
+    end
+
+    assert @invoice.reload.paid?
+  end
+
+  test "webhook for an already paid invoice enqueues no receipt" do
+    invoice = invoices(:acme_january)
+    invoice.pdf.attach io: StringIO.new("%PDF-1.4"), filename: "test.pdf", content_type: "application/pdf"
+    assert invoice.paid?
+
+    event = build_stripe_event(
+      type: "checkout.session.completed",
+      invoice_id: invoice.id,
+      currency: "jpy",
+      amount_total: invoice.total,
+      session_id: "cs_dup",
+      payment_intent: "pi_dup"
+    )
+
+    assert_no_enqueued_emails do
+      stub_stripe_construct_event(event) do
+        post webhooks_stripe_path, params: "{}", headers: stripe_headers
+      end
+    end
   end
 
   test "invalid signature returns bad_request" do

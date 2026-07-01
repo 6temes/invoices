@@ -61,8 +61,13 @@ class Invoice < ApplicationRecord
   end
 
   def mark_as_paid!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
-    update! status: :paid, paid_on:, paid_amount: total,
-            stripe_checkout_session_id:, stripe_payment_intent_id:
+    update!(status: :paid, paid_on:, paid_amount: total,
+            stripe_checkout_session_id:, stripe_payment_intent_id:)
+
+    # Enqueue after the update! commits (Rails 8.1 enqueue_after_transaction_commit
+    # defaults to false, and no caller wraps this in an outer transaction). This is
+    # the single choke point for both the Stripe-webhook and manual-mark paths.
+    InvoiceMailer.send_receipt(self).deliver_later
   end
 
   def can_send_reminder?

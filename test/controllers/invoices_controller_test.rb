@@ -203,6 +203,18 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     assert invoice.reload.paid?
   end
 
+  test "mark_as_paid on a bank-transfer invoice enqueues exactly one receipt email" do
+    invoice = invoices(:acme_february_draft) # acme is bank_transfer
+    invoice.update_columns status: "sent", sent_at: Time.current
+    attach_deliverables invoice
+
+    assert_enqueued_emails 1 do
+      post mark_as_paid_invoice_path(invoice)
+    end
+
+    assert invoice.reload.paid?
+  end
+
   test "mark_as_paid records the submitted payment date" do
     invoice = invoices(:sakura_january)
     attach_deliverables invoice

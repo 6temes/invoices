@@ -175,6 +175,41 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_includes email.html_part.decoded, invoice.due_date.to_s
   end
 
+  # --- send_receipt ---
+
+  test "send_receipt shows the amount paid and paid date as live text (English)" do
+    invoice = invoices(:acme_january) # en, paid, paid_amount 110000, paid_on 2026-02-15
+
+    email = InvoiceMailer.send_receipt(invoice)
+
+    assert_includes email.subject, "Payment received"
+    assert_includes email.html_part.decoded, "¥110,000"
+    assert_includes email.html_part.decoded, invoice.paid_on.to_s
+    assert_includes email.text_part.decoded, "Best regards"
+  end
+
+  test "send_receipt localizes for Japanese" do
+    invoice = invoices(:sakura_january) # ja
+    invoice.paid_amount = invoice.total
+    invoice.paid_on = Date.new(2026, 2, 20)
+
+    email = InvoiceMailer.send_receipt(invoice)
+
+    assert_includes email.subject, "お支払い確認"
+    assert_includes email.html_part.decoded, "御中"
+    assert_includes email.html_part.decoded, "¥247,500"
+  end
+
+  test "send_receipt is multipart and carries no attachments" do
+    email = InvoiceMailer.send_receipt(invoices(:acme_january))
+
+    assert email.multipart?
+    assert email.html_part
+    assert email.text_part
+    assert_empty email.attachments
+    assert_not_includes email.html_part.decoded, "/pay/"
+  end
+
   private
 
   def attach_fake_pdf(invoice)

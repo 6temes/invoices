@@ -1,6 +1,8 @@
 require "test_helper"
 
 class InvoiceTest < ActiveSupport::TestCase
+  include ActionMailer::TestHelper
+
   private
 
   def attach_fake_pdf(invoice)
@@ -217,6 +219,21 @@ class InvoiceTest < ActiveSupport::TestCase
 
     invoice.record_reminder!
     assert_equal 2, invoice.reminders_count
+  end
+
+  # --- Receipt on payment ---
+
+  test "mark_as_paid! enqueues a receipt email once and sets payment fields" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    assert_enqueued_email_with InvoiceMailer, :send_receipt, args: [ invoice ] do
+      invoice.mark_as_paid!
+    end
+
+    assert invoice.paid?
+    assert_equal invoice.total, invoice.paid_amount
+    assert_equal Date.current, invoice.paid_on
   end
 
   test "paid invoice requires paid_on" do
