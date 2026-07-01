@@ -1,6 +1,8 @@
 require "test_helper"
 
 class InvoiceDeliveryJobTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   test "delivers the invoice" do
     invoice = invoices(:acme_february_draft)
     invoice.prepare_for_delivery!
@@ -18,6 +20,19 @@ class InvoiceDeliveryJobTest < ActiveSupport::TestCase
     InvoiceDeliveryJob.perform_now invoice
 
     assert invoice.reload.failed?
+  end
+
+  test "rate limit error is retried, not discarded" do
+    invoice = invoices(:acme_february_draft)
+    invoice.prepare_for_delivery!
+
+    CloudflarePdfGateway.stubs(:render).raises(CloudflarePdfGateway::RateLimitError.new("HTTP 429"))
+
+    assert_enqueued_with job: InvoiceDeliveryJob do
+      InvoiceDeliveryJob.perform_now invoice
+    end
+
+    assert invoice.reload.preparing?
   end
 
   test "Stripe authentication failure marks invoice as failed" do

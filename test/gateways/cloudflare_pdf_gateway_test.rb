@@ -30,4 +30,13 @@ class CloudflarePdfGatewayTest < ActiveSupport::TestCase
       CloudflarePdfGateway.render "<h1>Invoice</h1>"
     end
   end
+
+  test "render raises RateLimitError on 429" do
+    stub_request(:post, @endpoint)
+      .to_return(status: 429, body: "Too Many Requests")
+
+    assert_raises CloudflarePdfGateway::RateLimitError do
+      CloudflarePdfGateway.render "<h1>Invoice</h1>"
+    end
+  end
 end

@@ -23,6 +23,10 @@ class InvoiceDeliveryJob < ApplicationJob
     job.send :mark_invoice_failed, job.arguments.first, error
   end
 
+  retry_on CloudflarePdfGateway::RateLimitError, wait: :polynomially_longer, attempts: 5 do |job, error|
+    job.send :mark_invoice_failed, job.arguments.first, error
+  end
+
   retry_on Faraday::ConnectionFailed, wait: :polynomially_longer, attempts: 3 do |job, error|
     job.send :mark_invoice_failed, job.arguments.first, error
   end
