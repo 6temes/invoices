@@ -21,6 +21,7 @@ Rails.application.routes.draw do
       patch :update_payment
       post :retry_delivery
       post :revert_to_draft
+      post :send_reminder
     end
   end
 

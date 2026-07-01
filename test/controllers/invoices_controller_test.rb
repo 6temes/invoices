@@ -1,6 +1,8 @@
 require "test_helper"
 
 class InvoicesControllerTest < ActionDispatch::IntegrationTest
+  include ActionMailer::TestHelper
+
   setup do
     sign_in_as users(:daniel)
   end
@@ -209,6 +211,51 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to invoice_path(invoice)
     assert_equal Date.new(2026, 5, 3), invoice.reload.paid_on
+  end
+
+  test "send_reminder on a sent invoice enqueues the reminder and records it" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+
+    assert_enqueued_email_with InvoiceMailer, :send_reminder, args: [ invoice ] do
+      post send_reminder_invoice_path(invoice)
+    end
+
+    invoice.reload
+    assert_equal 1, invoice.reminders_count
+    assert_not_nil invoice.reminded_at
+    assert_redirected_to invoice_path(invoice)
+    assert_equal "Reminder sent to #{invoice.client.name}.", flash[:notice]
+  end
+
+  test "send_reminder is blocked for a draft invoice" do
+    invoice = invoices(:acme_february_draft)
+
+    assert_no_enqueued_emails do
+      post send_reminder_invoice_path(invoice)
+    end
+
+    assert_equal 0, invoice.reload.reminders_count
+    assert_redirected_to invoice_path(invoice)
+    assert_equal "Only sent invoices can be reminded.", flash[:alert]
+  end
+
+  test "send_reminder is blocked for a paid invoice" do
+    invoice = invoices(:acme_january)
+
+    assert_no_enqueued_emails do
+      post send_reminder_invoice_path(invoice)
+    end
+
+    assert_redirected_to invoice_path(invoice)
+  end
+
+  test "show offers the reminder control only for sent invoices" do
+    get invoice_path(invoices(:sakura_january)) # sent
+    assert_includes response.body, "Send reminder"
+
+    get invoice_path(invoices(:acme_february_draft)) # draft
+    assert_not_includes response.body, "Send reminder"
   end
 
   test "payment renders the slideover form for a sent invoice" do

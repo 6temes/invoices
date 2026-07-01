@@ -1,5 +1,5 @@
 class InvoicesController < ApplicationController
-  before_action :set_invoice, only: %i[show edit update destroy deliver payment mark_as_paid update_payment retry_delivery revert_to_draft]
+  before_action :set_invoice, only: %i[show edit update destroy deliver payment mark_as_paid update_payment retry_delivery revert_to_draft send_reminder]
 
   def index
     scope = Invoice.includes(:client).order(issue_date: :desc, invoice_number: :desc)
@@ -152,6 +152,18 @@ class InvoicesController < ApplicationController
     @invoice.mark_as_paid! paid_on: params[:paid_on]&.to_date || Date.current
 
     redirect_to @invoice, notice: "Invoice marked as paid."
+  end
+
+  def send_reminder
+    unless @invoice.can_send_reminder?
+      redirect_to @invoice, alert: "Only sent invoices can be reminded."
+      return
+    end
+
+    @invoice.record_reminder!
+    InvoiceMailer.send_reminder(@invoice).deliver_later
+
+    redirect_to @invoice, notice: "Reminder sent to #{@invoice.client.name}."
   end
 
   def update_payment
