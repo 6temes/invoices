@@ -58,3 +58,10 @@ en:
       attachment_note: "The complete invoice is attached as a PDF for your records."
       closing: "Thank you for your continued partnership."
       signature: "Best regards,"
+    send_reminder:
+      subject: "Reminder: invoice #%{number} — %{invoice_subject}"
+      preheader: "A quick reminder about invoice #%{number}, due %{due_date}."
+      greeting: "Hi %{client_name},"
+      intro: "Just a friendly reminder that invoice #%{number} for %{period} is still awaiting payment. The details are below."
+      closing: "If you have already sent payment, please disregard this message — and thank you."
+      signature: "Best regards,"

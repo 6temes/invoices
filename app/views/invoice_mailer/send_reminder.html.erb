@@ -1,0 +1,22 @@
+<%
+  font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif"
+  greeting_style = "margin:0 0 16px 0; font-family:#{font}; font-size:16px; line-height:1.6; font-weight:600; color:#111827;"
+  p_style = "margin:0 0 16px 0; font-family:#{font}; font-size:16px; line-height:1.7; color:#1f2933;"
+  opening = t(".opening", default: "")
+  signature = t(".signature", default: "")
+-%>
+<p class="t-strong" style="<%= greeting_style %>"><%= t(".greeting", client_name: @client.name) %></p>
+<% if opening.present? %><p class="t-body" style="<%= p_style %>"><%= opening %></p><% end %>
+<p class="t-body" style="<%= p_style %>"><%= t(".intro", number: @invoice.invoice_number, period: @period) %></p>
+
+<%= render "amount_summary",
+      number: @invoice.invoice_number,
+      amount: @invoice.total,
+      amount_label: t("invoice.amount_due"),
+      date_label: t("invoice.due_date"),
+      date: @invoice.due_date %>
+
+<%= render "payment_action", client: @client, business: @business, payment_url: @payment_url %>
+
+<p class="t-body" style="<%= p_style %>"><%= t(".closing") %></p>
+<p class="t-body" style="margin:24px 0 0 0; font-family:<%= font %>; font-size:16px; line-height:1.6; color:#1f2933;"><% if signature.present? %><%= signature %><br><% end %><strong class="t-strong" style="color:#111827;"><%= @business.name %></strong></p>

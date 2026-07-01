@@ -132,6 +132,49 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_includes email.text_part.decoded, "引き続きどうぞよろしくお願いいたします"
   end
 
+  # --- send_reminder ---
+
+  test "send_reminder localizes the subject and body per locale" do
+    en = InvoiceMailer.send_reminder(invoices(:acme_january))
+    assert_includes en.subject, "Reminder"
+    assert_includes en.subject, invoices(:acme_january).invoice_number.to_s
+    assert_includes en.text_part.decoded, "Best regards"
+
+    ja = InvoiceMailer.send_reminder(invoices(:sakura_january))
+    assert_includes ja.subject, "請求書"
+    assert_includes ja.text_part.decoded, "御中"
+  end
+
+  test "send_reminder for a credit_card client includes a fresh payment link" do
+    email = InvoiceMailer.send_reminder(invoices(:sakura_january)) # ja, credit_card
+
+    assert_includes email.html_part.decoded, "/pay/"
+    assert_includes email.text_part.decoded, "/pay/"
+  end
+
+  test "send_reminder for a bank_transfer client restates bank details and no link" do
+    email = InvoiceMailer.send_reminder(invoices(:acme_january)) # en, bank_transfer
+
+    assert_includes email.html_part.decoded, businesses(:default).bank_name
+    assert_not_includes email.html_part.decoded, "/pay/"
+  end
+
+  test "send_reminder carries no attachments" do
+    email = InvoiceMailer.send_reminder(invoices(:sakura_january))
+
+    assert_empty email.attachments
+  end
+
+  test "send_reminder is multipart and shows the amount due and due date as live text" do
+    invoice = invoices(:sakura_january) # total 247500, due 2026-02-16
+
+    email = InvoiceMailer.send_reminder(invoice)
+
+    assert email.multipart?
+    assert_includes email.html_part.decoded, "¥247,500"
+    assert_includes email.html_part.decoded, invoice.due_date.to_s
+  end
+
   private
 
   def attach_fake_pdf(invoice)

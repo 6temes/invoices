@@ -58,3 +58,10 @@ ja:
       intro: "%{period}分の%{invoice_subject}に関するご請求書は下記の通りです。"
       attachment_note: 詳細は添付の請求書（PDF）をご確認ください。
       closing: 引き続きどうぞよろしくお願いいたします。
+    send_reminder:
+      subject: "【再送】請求書 #%{number} — %{invoice_subject}"
+      preheader: "請求書 #%{number} のお支払いに関するご確認（お支払い期限：%{due_date}）"
+      greeting: "%{client_name} 御中"
+      opening: いつもお世話になっております。
+      intro: "%{period}分のご請求書 #%{number} につきまして、お支払いがまだ確認できておりません。下記ご確認いただけますと幸いです。"
+      closing: 行き違いでお支払いお済みの場合は、何卒ご容赦ください。引き続きよろしくお願いいたします。

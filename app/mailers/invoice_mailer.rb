@@ -30,6 +30,25 @@ class InvoiceMailer < ApplicationMailer
     end
   end
 
+  def send_reminder(invoice)
+    @invoice = invoice
+    @business = Business.instance
+    @client = invoice.client
+
+    I18n.with_locale(invoice.locale) do
+      @period = @invoice.localized_billing_period
+      @payment_url = payment_url_for(invoice) if @client.credit_card?
+      @preheader = t("invoice_mailer.send_reminder.preheader",
+        number: invoice.invoice_number, due_date: invoice.due_date)
+
+      mail(
+        to: @client.email_with_name,
+        bcc: @business.email,
+        subject: default_i18n_subject(number: invoice.invoice_number, invoice_subject: invoice.subject)
+      )
+    end
+  end
+
   private
 
   def payment_url_for(invoice)
