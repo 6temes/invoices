@@ -31,7 +31,9 @@ module Authentication
 
     def request_authentication
       session[:return_to_after_authenticating] = request.path
-      redirect_to new_session_path
+      # main_app avoids inheriting a mounted engine's default_url_options (e.g. Mission
+      # Control Jobs injects server_id: nil), which otherwise breaks new_session_path.
+      redirect_to main_app.new_session_path
     end
 
     def after_authentication_url
