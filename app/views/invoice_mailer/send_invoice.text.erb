@@ -1,26 +1,24 @@
-<%= t("invoice_mailer.send_invoice.greeting", client_name: @client.name) %>
-<% if I18n.locale == :ja %>
+<%= t(".greeting", client_name: @client.name) %>
+<% opening = t(".opening", default: "") -%>
+<% if opening.present? -%>
+<%= opening %>
+<% end -%>
+<%= t(".intro", invoice_subject: @invoice.subject, period: @period) %>
 
-<%= t("invoice_mailer.send_invoice.opening") %>
-<% end %>
+<%= render "amount_summary",
+      number: @invoice.invoice_number,
+      amount: @invoice.total,
+      amount_label: t("invoice.amount_due"),
+      date_label: t("invoice.due_date"),
+      date: @invoice.due_date -%>
 
-<%= t("invoice_mailer.send_invoice.body", number: @invoice.invoice_number, total: number_with_delimiter(@invoice.total), invoice_subject: @invoice.subject.downcase, period: @period) %>
+<%= render "payment_action", client: @client, business: @business, payment_url: @payment_url -%>
 
-<%= t("invoice_mailer.send_invoice.due_date", date: @invoice.due_date) %>
-<% if @client.credit_card? && @payment_url %>
+<%= t(".attachment_note") %>
 
-<%= t("invoice_mailer.send_invoice.stripe_instructions", link: @payment_url) %>
-<% else %>
-
-<%= t("invoice_mailer.send_invoice.bank_instructions") %>
-<% end %>
-
-<%= t("invoice_mailer.send_invoice.closing") %>
-<% if I18n.locale != :ja %>
-
-<%= t("invoice_mailer.send_invoice.signature") %>
+<%= t(".closing") %>
+<% signature = t(".signature", default: "") -%>
+<% if signature.present? -%>
+<%= signature %>
+<% end -%>
 <%= @business.name %>
-<% else %>
-
-<%= @business.name %>
-<% end %>

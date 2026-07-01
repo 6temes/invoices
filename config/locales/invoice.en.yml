@@ -52,10 +52,9 @@ en:
       pay_note: "Secure online payment by credit card, powered by Stripe."
     send_invoice:
       subject: "Invoice #%{number} — %{invoice_subject}"
+      preheader: "Invoice #%{number} for %{period}, due %{due_date}."
       greeting: "Hi %{client_name},"
-      body: "Please find attached invoice #%{number} for ¥%{total}, covering %{invoice_subject} for %{period}."
-      due_date: "Payment is due by %{date}."
-      bank_instructions: "Transfer details are included in the attached invoice."
-      stripe_instructions: "You can pay securely by credit card here: %{link}"
+      intro: "Please find your invoice for %{invoice_subject}, covering %{period}, summarized below."
+      attachment_note: "The complete invoice is attached as a PDF for your records."
       closing: "Thank you for your continued partnership."
       signature: "Best regards,"

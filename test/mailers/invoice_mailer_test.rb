@@ -79,6 +79,59 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_equal "invoice_#{invoice.invoice_number}.xml", xml_attachment.filename
   end
 
+  test "send_invoice is multipart with html and text parts" do
+    invoice = invoices(:acme_january)
+    attach_fake_deliverables invoice
+
+    email = InvoiceMailer.send_invoice(invoice)
+
+    assert email.multipart?
+    assert email.html_part
+    assert email.text_part
+  end
+
+  test "send_invoice renders the amount as formatted yen live text" do
+    invoice = invoices(:acme_january) # total 110000
+    attach_fake_deliverables invoice
+
+    email = InvoiceMailer.send_invoice(invoice)
+
+    assert_includes email.html_part.decoded, "¥110,000"
+    assert_includes email.text_part.decoded, "¥110,000"
+  end
+
+  test "send_invoice for a credit_card client shows a payment link and no bank details" do
+    invoice = invoices(:sakura_january) # ja, credit_card
+    attach_fake_deliverables invoice
+
+    email = InvoiceMailer.send_invoice(invoice)
+
+    assert_includes email.html_part.decoded, "/pay/"
+    assert_includes email.text_part.decoded, "/pay/"
+    assert_not_includes email.html_part.decoded, businesses(:default).bank_account_number
+  end
+
+  test "send_invoice for a bank_transfer client shows bank details and no payment link" do
+    invoice = invoices(:acme_january) # en, bank_transfer
+    attach_fake_deliverables invoice
+    business = businesses(:default)
+
+    email = InvoiceMailer.send_invoice(invoice)
+
+    assert_includes email.html_part.decoded, business.bank_name
+    assert_includes email.html_part.decoded, business.bank_account_number
+    assert_not_includes email.html_part.decoded, "/pay/"
+  end
+
+  test "send_invoice localizes the body for Japanese" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    email = InvoiceMailer.send_invoice(invoice)
+
+    assert_includes email.text_part.decoded, "引き続きどうぞよろしくお願いいたします"
+  end
+
   private
 
   def attach_fake_pdf(invoice)
