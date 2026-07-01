@@ -189,6 +189,36 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal invoice.total, invoice.paid_amount
   end
 
+  # --- Reminder tracking ---
+
+  test "can_send_reminder? is true only for sent invoices" do
+    assert invoices(:sakura_january).can_send_reminder? # sent
+
+    assert_not invoices(:acme_february_draft).can_send_reminder? # draft
+    assert_not invoices(:acme_january).can_send_reminder? # paid
+
+    invoice = invoices(:acme_february_draft)
+    invoice.prepare_for_delivery!
+    assert_not invoice.can_send_reminder? # preparing
+
+    invoice.mark_as_failed!
+    assert_not invoice.can_send_reminder? # failed
+  end
+
+  test "record_reminder! sets reminded_at and increments the count" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    assert_nil invoice.reminded_at
+    assert_equal 0, invoice.reminders_count
+
+    invoice.record_reminder!
+    assert_not_nil invoice.reminded_at
+    assert_equal 1, invoice.reminders_count
+
+    invoice.record_reminder!
+    assert_equal 2, invoice.reminders_count
+  end
+
   test "paid invoice requires paid_on" do
     invoice = invoices(:acme_january)
     attach_fake_deliverables invoice

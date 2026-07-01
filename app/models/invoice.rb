@@ -39,6 +39,9 @@ class Invoice < ApplicationRecord
   before_create :assign_next_number
 
   PAYMENT_FIELDS = %w[sent_at status paid_on paid_amount stripe_checkout_session_id stripe_payment_intent_id].freeze
+  # Reminder metadata is operational, not invoice content, so it stays editable
+  # on frozen (non-draft) invoices — see immutable_when_frozen.
+  REMINDER_FIELDS = %w[reminded_at reminders_count].freeze
 
   def build_from_retainer
     retainer = client.active_retainer
@@ -60,6 +63,14 @@ class Invoice < ApplicationRecord
   def mark_as_paid!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
     update! status: :paid, paid_on:, paid_amount: total,
             stripe_checkout_session_id:, stripe_payment_intent_id:
+  end
+
+  def can_send_reminder?
+    sent?
+  end
+
+  def record_reminder!
+    update! reminded_at: Time.current, reminders_count: reminders_count + 1
   end
 
   def prepare_for_delivery!
@@ -258,7 +269,7 @@ class Invoice < ApplicationRecord
   def immutable_when_frozen
     return if draft?
 
-    changed_fields = changed - PAYMENT_FIELDS - %w[updated_at]
+    changed_fields = changed - PAYMENT_FIELDS - REMINDER_FIELDS - %w[updated_at]
     return if changed_fields.empty?
 
     errors.add :base, "cannot modify a #{status} invoice (only payment fields are allowed)"
