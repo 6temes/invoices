@@ -108,7 +108,9 @@ class InvoiceMailerTest < ActionMailer::TestCase
 
     assert_includes email.html_part.decoded, "/pay/"
     assert_includes email.text_part.decoded, "/pay/"
-    assert_not_includes email.html_part.decoded, businesses(:default).bank_account_number
+    # Assert on the bank name, not the account number: a short numeric string can
+    # collide with the random signed-id token in the payment URL.
+    assert_not_includes email.html_part.decoded, businesses(:default).bank_name
   end
 
   test "send_invoice for a bank_transfer client shows bank details and no payment link" do
