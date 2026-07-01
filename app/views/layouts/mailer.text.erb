@@ -1,1 +1,9 @@
-<%= yield %>
+<% business = Business.instance -%>
+<%= business.name %>
+========================================
+
+<%= yield -%>
+
+----------------------------------------
+<%= business.name %> · <%= t("invoice.registration_number") %> <%= business.tax_registration_number %>
+<%= t("invoice_mailer.footer.automated") %>

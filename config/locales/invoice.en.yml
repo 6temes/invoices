@@ -46,6 +46,10 @@ en:
     thank_you_body: "Invoice #%{number} has been paid."
 
   invoice_mailer:
+    footer:
+      automated: "This is an automated message — please keep it for your records."
+    shared:
+      pay_note: "Secure online payment by credit card, powered by Stripe."
     send_invoice:
       subject: "Invoice #%{number} — %{invoice_subject}"
       greeting: "Hi %{client_name},"

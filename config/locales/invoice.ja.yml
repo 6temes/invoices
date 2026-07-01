@@ -46,6 +46,10 @@ ja:
     thank_you_body: "請求書 #%{number} のお支払いを確認いたしました。"
 
   invoice_mailer:
+    footer:
+      automated: 本メールは自動送信されています。大切に保管してください。
+    shared:
+      pay_note: クレジットカードによる安全なオンライン決済（Stripe）です。
     send_invoice:
       subject: "請求書 #%{number} — %{invoice_subject}"
       greeting: "%{client_name} 御中"

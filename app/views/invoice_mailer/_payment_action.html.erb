@@ -1,0 +1,49 @@
+<%# locals: (client:, business:, payment_url:) -%>
+<% if client.credit_card? && payment_url.present? %>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr>
+            <td align="center" bgcolor="#2563eb" style="border-radius:6px;">
+              <a href="<%= payment_url %>" target="_blank" rel="noopener" style="display:inline-block; padding:14px 32px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif; font-size:16px; font-weight:700; line-height:1; color:#ffffff; text-decoration:none; border-radius:6px;">
+                <%= t("invoice.pay_with_credit_card") %>
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p class="t-muted" style="margin:12px 0 0 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif; font-size:13px; line-height:1.5; color:#6b7280;">
+          <%= t("invoice_mailer.shared.pay_note") %>
+        </p>
+      </td>
+    </tr>
+  </table>
+<% else %>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+    <tr>
+      <td style="border:1px solid #e5e7eb; border-radius:8px; padding:20px 24px;" class="email-card email-rule">
+        <p class="t-strong" style="margin:0 0 12px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif; font-size:15px; font-weight:700; color:#111827;">
+          <%= t("invoice.bank_transfer_instructions") %>
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <% {
+               "invoice.bank_name" => business.bank_name,
+               "invoice.bank_branch" => business.bank_branch,
+               "invoice.bank_account_type" => business.bank_account_type,
+               "invoice.bank_account_number" => business.bank_account_number,
+               "invoice.bank_account_holder" => business.bank_account_holder
+             }.each do |label_key, value| %>
+            <tr>
+              <td class="t-muted" style="padding:3px 12px 3px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif; font-size:14px; line-height:1.6; color:#6b7280; white-space:nowrap;">
+                <%= t(label_key) %>
+              </td>
+              <td class="t-body" style="padding:3px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif; font-size:14px; line-height:1.6; font-weight:600; color:#1f2933;">
+                <%= value %>
+              </td>
+            </tr>
+          <% end %>
+        </table>
+      </td>
+    </tr>
+  </table>
+<% end %>
