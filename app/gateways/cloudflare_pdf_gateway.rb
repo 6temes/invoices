@@ -1,6 +1,7 @@
 class CloudflarePdfGateway
   ServerError = Class.new(StandardError)
   ClientError = Class.new(StandardError)
+  RateLimitError = Class.new(StandardError)
 
   def self.render(html)
     account_id = Rails.application.credentials.dig(:cloudflare, :account_id)
@@ -17,6 +18,8 @@ class CloudflarePdfGateway
 
     if response.status >= 500
       raise ServerError, "PDF generation failed (HTTP #{response.status})"
+    elsif response.status == 429
+      raise RateLimitError, "PDF generation failed (HTTP #{response.status})"
     else
       raise ClientError, "PDF generation failed (HTTP #{response.status})"
     end
