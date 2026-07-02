@@ -5,9 +5,30 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    /*
+      Rendered by Cloudflare Browser Rendering (real Chromium) — full modern CSS
+      is available here, unlike the email templates. Visual system mirrors the
+      client emails: midtone palette, soft rounded surfaces, uppercase micro-labels,
+      a hero amount block, #2563eb accent and #059669 for the paid state.
+    */
+    :root {
+      --ink: #111827;
+      --ink-soft: #1f2933;
+      --muted: #6b7280;
+      --faint: #9ca3af;
+      --line: #e5e7eb;
+      --line-soft: #f3f4f6;
+      --surface: #f9fafb;
+      --surface-line: #eef0f2;
+      --accent: #2563eb;
+      --paid: #059669;
+      --paid-bg: #ecfdf5;
+      --paid-line: #a7f3d0;
+    }
+
     @page {
       size: A4;
-      margin: 40px 50px 60px 50px;
+      margin: 40px 46px 58px 46px;
     }
 
     * {
@@ -17,19 +38,26 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+        "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+        "Yu Gothic", YuGothic, Meiryo, Arial, sans-serif;
       font-size: 12px;
       line-height: 1.5;
-      color: #1a1a1a;
+      color: var(--ink-soft);
       background: #fff;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .invoice-page {
-      width: 100%;
-      max-width: 750px;
-      margin: 0 auto;
-      padding: 40px 50px;
-      position: relative;
+    .eyebrow {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .num {
+      font-variant-numeric: tabular-nums;
     }
 
     /* --- Header --- */
@@ -37,96 +65,148 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 40px;
+      gap: 24px;
+      margin-bottom: 24px;
     }
 
-    .header-title {
-      font-size: 36px;
-      font-weight: 900;
-      letter-spacing: -0.5px;
+    .doc-title {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--ink);
+      line-height: 1.05;
     }
 
-    .from-block {
-      text-align: left;
-      font-size: 12px;
-      line-height: 1.6;
+    .doc-title-rule {
+      width: 44px;
+      height: 3px;
+      border-radius: 3px;
+      background: var(--accent);
+      margin-top: 12px;
     }
 
-    .from-label, .invoice-for-label {
-      color: #888;
-      font-size: 11px;
-      margin-bottom: 2px;
+    .doc-meta {
+      min-width: 210px;
+      text-align: right;
     }
 
-    .from-name, .client-name {
+    .doc-number {
+      font-size: 19px;
       font-weight: 700;
-      font-size: 14px;
-    }
-
-    .from-divider, .invoice-for-divider {
-      border-left: 2px solid #1a1a1a;
-      padding-left: 12px;
-    }
-
-    .registration-number {
-      margin-top: 8px;
-      font-size: 11px;
-    }
-
-    /* --- Parties section (From + Invoice For side by side) --- */
-    .parties-section {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 30px;
-    }
-
-    .parties-section > div {
-      flex: 1;
-    }
-
-    .client-address {
-      font-size: 12px;
-      line-height: 1.5;
+      color: var(--ink);
       margin-top: 2px;
     }
 
-    /* --- Meta section --- */
-    .meta-section {
-      margin-bottom: 30px;
+    .paid-pill {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: var(--paid-bg);
+      border: 1px solid var(--paid-line);
+      color: var(--paid);
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
     }
 
-    .meta-row {
+    .doc-dates {
+      margin-top: 14px;
       display: flex;
-      border-bottom: 1px solid #e5e5e5;
-      padding: 5px 0;
+      flex-direction: column;
+      gap: 5px;
+      align-items: flex-end;
     }
 
-    .meta-label {
-      width: 90px;
-      color: #888;
-      font-size: 11px;
-      flex-shrink: 0;
+    .doc-date-row {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      font-size: 11.5px;
     }
 
-    .meta-value {
+    .doc-date-row .label {
+      color: var(--muted);
+    }
+
+    .doc-date-row .value {
       font-weight: 600;
-      font-size: 12px;
+      color: var(--ink);
     }
 
-    /* --- Line items table --- */
+    /* --- Parties --- */
+    .parties {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .party {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--surface-line);
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+
+    .party-name {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 8px 0 4px;
+    }
+
+    .party-address {
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.6;
+    }
+
+    .party-reg {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--surface-line);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .party-reg .value {
+      font-weight: 600;
+      color: var(--ink-soft);
+    }
+
+    /* --- Subject --- */
+    .subject {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 0 2px 14px;
+      margin-bottom: 6px;
+    }
+
+    .subject .value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    /* --- Line items --- */
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
     }
 
     .items-table thead th {
       text-align: left;
-      font-size: 11px;
+      font-size: 9.5px;
       font-weight: 700;
-      padding: 8px 10px;
-      border-bottom: 2px solid #1a1a1a;
-      border-top: 2px solid #1a1a1a;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 10px 9px;
+      border-bottom: 1.5px solid var(--line);
     }
 
     .items-table thead th.right {
@@ -135,288 +215,316 @@
 
     .items-table tbody td {
       padding: 10px 10px;
-      border-bottom: 1px solid #e5e5e5;
+      border-bottom: 1px solid var(--line-soft);
       vertical-align: top;
       font-size: 12px;
+      color: var(--ink-soft);
     }
 
     .items-table tbody td.right {
       text-align: right;
-      font-variant-numeric: tabular-nums;
     }
 
-    .col-type { width: 70px; }
-    .col-qty { width: 60px; }
-    .col-price { width: 90px; }
-    .col-amount { width: 90px; }
+    .items-table tbody td.amount {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .item-chip {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--surface-line);
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .col-type { width: 92px; }
+    .col-qty { width: 58px; }
+    .col-price { width: 96px; }
+    .col-amount { width: 100px; }
 
     /* --- Totals --- */
     .totals {
       display: flex;
       justify-content: flex-end;
-      margin-bottom: 30px;
+      margin-bottom: 18px;
     }
 
     .totals-table {
-      width: 280px;
+      width: 300px;
     }
 
     .totals-row {
       display: flex;
       justify-content: space-between;
-      padding: 4px 0;
+      padding: 5px 4px;
       font-size: 12px;
     }
 
-    .totals-row.total-line {
-      border-top: 2px solid #1a1a1a;
-      margin-top: 6px;
-      padding-top: 10px;
-      font-size: 16px;
-      font-weight: 700;
-    }
+    .totals-row .label { color: var(--muted); }
+    .totals-row .value { font-weight: 600; color: var(--ink-soft); }
 
-    .totals-label {
-      color: #555;
-    }
-
-    .totals-value {
-      font-variant-numeric: tabular-nums;
-      font-weight: 600;
-    }
-
-    .total-line .totals-label,
-    .total-line .totals-value {
-      color: #1a1a1a;
-    }
-
-    /* --- Bank transfer details --- */
-    .bank-section {
-      border-top: 2px solid #1a1a1a;
-      padding-top: 12px;
-      margin-top: 10px;
-    }
-
-    .bank-title {
-      font-weight: 700;
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-
-    .bank-details {
-      font-size: 12px;
-      line-height: 1.8;
-    }
-
-    .bank-row {
+    .grand-total {
       display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding: 16px 18px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--surface-line);
     }
 
-    .bank-label {
-      width: 120px;
-      color: #555;
-      flex-shrink: 0;
+    .grand-total.is-paid {
+      background: var(--paid-bg);
+      border-color: var(--paid-line);
     }
 
-    .bank-value {
-      font-weight: 600;
-    }
-
-    /* --- Notes --- */
-    .notes-section {
-      border-top: 2px solid #1a1a1a;
-      padding-top: 12px;
-      margin-top: 20px;
-    }
-
-    .notes-title {
+    .grand-total .grand-label {
+      font-size: 9.5px;
       font-weight: 700;
-      font-size: 12px;
-      margin-bottom: 8px;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .grand-total .grand-value {
+      font-size: 27px;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .grand-total.is-paid .grand-value {
+      color: var(--paid);
+    }
+
+    /* --- Cards (bank / notes) --- */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface-line);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-top: 16px;
+    }
+
+    .card-title {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .bank-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 24px;
+    }
+
+    .bank-item .bank-label {
+      font-size: 10.5px;
+      color: var(--muted);
+    }
+
+    .bank-item .bank-value {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--ink);
     }
 
     .notes-body {
       font-size: 12px;
       line-height: 1.6;
+      color: var(--ink-soft);
+    }
+
+    .notes-body p {
+      margin: 0 0 6px;
+    }
+
+    .notes-body p:last-child {
+      margin-bottom: 0;
     }
 
     /* --- Footer --- */
+    /*
+      Normal flow, not position:fixed. Chrome's print engine spawns a phantom
+      trailing page when a bottom-anchored fixed element sits below short content,
+      so the footer follows the content with a separating rule instead.
+    */
     .page-footer {
-      position: fixed;
-      bottom: 30px;
-      left: 0;
-      right: 0;
+      margin-top: 28px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line-soft);
       text-align: center;
-      font-size: 10px;
-      color: #888;
+      font-size: 9.5px;
+      line-height: 1.6;
+      color: var(--faint);
     }
 
-    /* --- Paid stamp --- */
-    .paid-stamp {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-15deg);
-      font-size: 72px;
-      font-weight: 900;
-      color: rgba(5, 150, 105, 0.15);
-      pointer-events: none;
-      z-index: 10;
+    .page-footer .footer-org {
+      color: var(--muted);
     }
   </style>
 </head>
 <body>
-  <div class="invoice-page">
-    <% if invoice.paid? %>
-      <div class="paid-stamp"><%= t("invoice.paid_stamp") %></div>
-    <% end %>
-
-    <!-- Header -->
-    <div class="header">
-      <div class="header-title"><%= t("invoice.document_title") %></div>
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="doc-title"><%= t("invoice.document_title") %></div>
+      <div class="doc-title-rule"></div>
     </div>
-
-    <!-- From + Invoice For (aligned side by side) -->
-    <div class="parties-section">
-      <div>
-        <div class="from-label"><%= t("invoice.from") %></div>
-        <div class="from-divider">
-          <div class="from-name"><%= business.name %></div>
-          <% if business.address %>
-            <% business.address.formatted_lines.each do |line| %>
-              <%= line %><br>
-            <% end %>
-          <% end %>
-          <div class="registration-number"><%= t("invoice.registration_number") %> <%= business.tax_registration_number %></div>
+    <div class="doc-meta">
+      <div class="eyebrow"><%= t("invoice.id") %></div>
+      <div class="doc-number num">#<%= invoice.invoice_number %></div>
+      <% if invoice.paid? %>
+        <div class="paid-pill"><%= t("invoice.paid_stamp") %></div>
+      <% end %>
+      <div class="doc-dates">
+        <div class="doc-date-row">
+          <span class="label"><%= t("invoice.issue_date") %></span>
+          <span class="value num"><%= invoice.issue_date %></span>
         </div>
-      </div>
-      <div>
-        <div class="invoice-for-label"><%= t("invoice.for") %></div>
-        <div class="invoice-for-divider">
-          <div class="client-name"><%= invoice.client.name %></div>
-          <% if invoice.client.address %>
-            <div class="client-address">
-              <% invoice.client.address.formatted_lines.each do |line| %>
-                <%= line %><br>
-              <% end %>
-            </div>
-          <% end %>
-          <% if invoice.client.tax_registration_number.present? %>
-            <div class="registration-number"><%= t("invoice.registration_number") %> <%= invoice.client.tax_registration_number %></div>
-          <% end %>
+        <div class="doc-date-row">
+          <span class="label"><%= t("invoice.due_date") %></span>
+          <span class="value num"><%= invoice.due_date %> · <%= t("invoice.payment_terms", days: invoice.client.payment_terms_days) %></span>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Meta -->
-    <div class="meta-section">
-      <div class="meta-row">
-        <span class="meta-label"><%= t("invoice.id") %></span>
-        <span class="meta-value"><%= invoice.invoice_number %></span>
-      </div>
-      <div class="meta-row">
-        <span class="meta-label"><%= t("invoice.issue_date") %></span>
-        <span class="meta-value"><%= invoice.issue_date %></span>
-      </div>
-      <div class="meta-row">
-        <span class="meta-label"><%= t("invoice.due_date") %></span>
-        <span class="meta-value"><%= invoice.due_date %> (<%= t("invoice.payment_terms", days: invoice.client.payment_terms_days) %>)</span>
-      </div>
-      <div class="meta-row">
-        <span class="meta-label"><%= t("invoice.subject_label") %></span>
-        <span class="meta-value"><%= invoice.subject %></span>
-      </div>
+  <!-- Parties -->
+  <div class="parties">
+    <div class="party">
+      <div class="eyebrow"><%= t("invoice.from") %></div>
+      <div class="party-name"><%= business.name %></div>
+      <% if business.address %>
+        <div class="party-address">
+          <% business.address.formatted_lines.each do |line| %>
+            <%= line %><br>
+          <% end %>
+        </div>
+      <% end %>
+      <div class="party-reg"><%= t("invoice.registration_number") %> <span class="value"><%= business.tax_registration_number %></span></div>
     </div>
+    <div class="party">
+      <div class="eyebrow"><%= t("invoice.for") %></div>
+      <div class="party-name"><%= invoice.client.name %></div>
+      <% if invoice.client.address %>
+        <div class="party-address">
+          <% invoice.client.address.formatted_lines.each do |line| %>
+            <%= line %><br>
+          <% end %>
+        </div>
+      <% end %>
+      <% if invoice.client.tax_registration_number.present? %>
+        <div class="party-reg"><%= t("invoice.registration_number") %> <span class="value"><%= invoice.client.tax_registration_number %></span></div>
+      <% end %>
+    </div>
+  </div>
 
-    <!-- Line Items -->
-    <table class="items-table">
-      <thead>
+  <!-- Subject -->
+  <div class="subject">
+    <span class="eyebrow"><%= t("invoice.subject_label") %></span>
+    <span class="value"><%= invoice.subject %></span>
+  </div>
+
+  <!-- Line items -->
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th class="col-type"><%= t("invoice.item_type") %></th>
+        <th class="col-desc"><%= t("invoice.description") %></th>
+        <th class="col-qty right"><%= t("invoice.quantity") %></th>
+        <th class="col-price right"><%= t("invoice.unit_price") %></th>
+        <th class="col-amount right"><%= t("invoice.amount") %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% invoice.line_items.each do |item| %>
         <tr>
-          <th class="col-type"><%= t("invoice.item_type") %></th>
-          <th class="col-desc"><%= t("invoice.description") %></th>
-          <th class="col-qty right"><%= t("invoice.quantity") %></th>
-          <th class="col-price right"><%= t("invoice.unit_price") %></th>
-          <th class="col-amount right"><%= t("invoice.amount") %></th>
+          <td><span class="item-chip"><%= item_type_label(item.item_type) %></span></td>
+          <td><%= item.description %></td>
+          <td class="right num"><%= item.quantity % 1 == 0 ? item.quantity.to_i : item.quantity %></td>
+          <td class="right num">¥<%= number_with_delimiter item.unit_price %></td>
+          <td class="right num amount">¥<%= number_with_delimiter item.amount %></td>
         </tr>
-      </thead>
-      <tbody>
-        <% invoice.line_items.each do |item| %>
-          <tr>
-            <td><%= item_type_label(item.item_type) %></td>
-            <td><%= item.description %></td>
-            <td class="right"><%= item.quantity % 1 == 0 ? item.quantity.to_i : item.quantity %></td>
-            <td class="right">¥<%= number_with_delimiter item.unit_price %></td>
-            <td class="right"><strong>¥<%= number_with_delimiter item.amount %></strong></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+      <% end %>
+    </tbody>
+  </table>
 
-    <!-- Totals -->
-    <div class="totals">
-      <div class="totals-table">
+  <!-- Totals -->
+  <div class="totals">
+    <div class="totals-table">
+      <div class="totals-row">
+        <span class="label"><%= t("invoice.subtotal") %></span>
+        <span class="value num">¥<%= number_with_delimiter invoice.subtotal %></span>
+      </div>
+      <div class="totals-row">
+        <span class="label"><%= t("invoice.tax", rate: invoice.tax_rate.to_i) %></span>
+        <span class="value num">¥<%= number_with_delimiter invoice.tax_amount %></span>
+      </div>
+      <% if invoice.paid? %>
         <div class="totals-row">
-          <span class="totals-label"><%= t("invoice.subtotal") %></span>
-          <span class="totals-value">¥<%= number_with_delimiter invoice.subtotal %></span>
+          <span class="label"><%= t("invoice.payments") %></span>
+          <span class="value num">−¥<%= number_with_delimiter invoice.paid_amount %></span>
         </div>
-        <div class="totals-row">
-          <span class="totals-label"><%= t("invoice.tax", rate: invoice.tax_rate.to_i) %></span>
-          <span class="totals-value">¥<%= number_with_delimiter invoice.tax_amount %></span>
+      <% end %>
+      <div class="grand-total <%= "is-paid" if invoice.paid? %>">
+        <span class="grand-label"><%= invoice.paid? ? t("invoice.amount_due") : t("invoice.total") %></span>
+        <span class="grand-value num">¥<%= number_with_delimiter(invoice.paid? ? (invoice.total - invoice.paid_amount) : invoice.total) %></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bank transfer details -->
+  <% if invoice.client.bank_transfer? %>
+    <div class="card">
+      <div class="card-title"><%= t("invoice.bank_transfer_instructions") %></div>
+      <div class="bank-grid">
+        <div class="bank-item">
+          <div class="bank-label"><%= t("invoice.bank_name") %></div>
+          <div class="bank-value"><%= business.bank_name %></div>
         </div>
-        <% if invoice.paid? %>
-          <div class="totals-row">
-            <span class="totals-label"><%= t("invoice.payments") %></span>
-            <span class="totals-value">-¥<%= number_with_delimiter invoice.paid_amount %></span>
-          </div>
-        <% end %>
-        <div class="totals-row total-line">
-          <span class="totals-label"><%= invoice.paid? ? t("invoice.amount_due") : t("invoice.total") %></span>
-          <span class="totals-value">¥<%= number_with_delimiter(invoice.paid? ? (invoice.total - invoice.paid_amount) : invoice.total) %></span>
+        <div class="bank-item">
+          <div class="bank-label"><%= t("invoice.bank_branch") %></div>
+          <div class="bank-value"><%= business.bank_branch %></div>
+        </div>
+        <div class="bank-item">
+          <div class="bank-label"><%= t("invoice.bank_account_type") %></div>
+          <div class="bank-value"><%= business.bank_account_type %></div>
+        </div>
+        <div class="bank-item">
+          <div class="bank-label"><%= t("invoice.bank_account_number") %></div>
+          <div class="bank-value num"><%= business.bank_account_number %></div>
+        </div>
+        <div class="bank-item">
+          <div class="bank-label"><%= t("invoice.bank_account_holder") %></div>
+          <div class="bank-value"><%= business.bank_account_holder %></div>
         </div>
       </div>
     </div>
+  <% end %>
 
-    <!-- Bank Transfer Details -->
-    <% if invoice.client.bank_transfer? %>
-      <div class="bank-section">
-        <div class="bank-title"><%= t("invoice.bank_transfer_instructions") %></div>
-        <div class="bank-details">
-          <div class="bank-row">
-            <span class="bank-label"><%= t("invoice.bank_name") %></span>
-            <span class="bank-value"><%= business.bank_name %></span>
-          </div>
-          <div class="bank-row">
-            <span class="bank-label"><%= t("invoice.bank_branch") %></span>
-            <span class="bank-value"><%= business.bank_branch %></span>
-          </div>
-          <div class="bank-row">
-            <span class="bank-label"><%= t("invoice.bank_account_type") %></span>
-            <span class="bank-value"><%= business.bank_account_type %></span>
-          </div>
-          <div class="bank-row">
-            <span class="bank-label"><%= t("invoice.bank_account_number") %></span>
-            <span class="bank-value"><%= business.bank_account_number %></span>
-          </div>
-          <div class="bank-row">
-            <span class="bank-label"><%= t("invoice.bank_account_holder") %></span>
-            <span class="bank-value"><%= business.bank_account_holder %></span>
-          </div>
-        </div>
-      </div>
-    <% end %>
-
-    <!-- Notes -->
-    <% if invoice.notes.present? %>
-      <div class="notes-section">
-        <div class="notes-title"><%= t("invoice.notes") %></div>
-        <div class="notes-body"><%= simple_format invoice.notes, {}, wrapper_tag: "div" %></div>
-      </div>
-    <% end %>
-
-    <!-- Footer -->
-    <div class="page-footer">
-      <%= t("invoice.page_numbering", page: 1, total: 1) %>
+  <!-- Notes -->
+  <% if invoice.notes.present? %>
+    <div class="card">
+      <div class="card-title"><%= t("invoice.notes") %></div>
+      <div class="notes-body"><%= simple_format invoice.notes, {}, wrapper_tag: "div" %></div>
     </div>
+  <% end %>
+
+  <!-- Footer -->
+  <div class="page-footer">
+    <span class="footer-org"><%= business.name %></span> · <%= t("invoice.registration_number") %> <%= business.tax_registration_number %><br>
+    <%= t("invoice.page_numbering", page: 1, total: 1) %>
   </div>
 </body>
 </html>
