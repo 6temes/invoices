@@ -3,7 +3,7 @@
 <% if opening.present? -%>
 <%= opening %>
 <% end -%>
-<%= t(".intro", invoice_subject: @invoice.subject, period: @period) %>
+<%= t(".intro", number: @invoice.invoice_number, period: @period) %>
 
 <%= render "amount_summary",
       number: @invoice.invoice_number,
@@ -13,8 +13,6 @@
       date: @invoice.due_date -%>
 
 <%= render "payment_action", client: @client, business: @business, payment_url: @payment_url -%>
-
-<%= t(".attachment_note") %>
 
 <%= t(".closing") %>
 <% signature = t(".signature", default: "") -%>

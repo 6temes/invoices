@@ -10,6 +10,7 @@
       <span class="btn btn-accent" style="opacity: 0.6; pointer-events: none;">Sending...</span>
     <% elsif invoice.sent? %>
       <%= link_to "Mark as paid", payment_invoice_path(invoice), class: "btn btn-accent", data: { action: "slideover#open" } %>
+      <%= button_to "Send reminder", send_reminder_invoice_path(invoice), class: "btn", data: { turbo_confirm: "Send a payment reminder to #{invoice.client.name}?", turbo_submits_with: "Sending..." } %>
     <% elsif invoice.failed? %>
       <%= button_to "Retry", retry_delivery_invoice_path(invoice), class: "btn btn-accent", data: { turbo_confirm: "Retry sending this invoice?" } %>
       <%= button_to "Revert to draft", revert_to_draft_invoice_path(invoice), class: "btn", data: { turbo_confirm: "Revert this invoice to draft?" } %>
@@ -24,6 +25,9 @@
 </div>
 
 <span class="badge badge-<%= invoice.status %>" style="font-size: 13px; margin-bottom: 1rem; display: inline-block;"><%= invoice.status.upcase %></span>
+<% if invoice.reminded_at.present? %>
+  <span style="color: var(--color-text-muted); font-size: 13px; margin-left: 0.5rem;">Last reminded <%= time_ago_in_words(invoice.reminded_at) %> ago</span>
+<% end %>
 
 <div class="card">
   <% I18n.with_locale(invoice.locale) do %>

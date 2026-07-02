@@ -5,12 +5,10 @@ class InvoiceMailer < ApplicationMailer
     @client = invoice.client
 
     I18n.with_locale(invoice.locale) do
-      @subject_line = t("invoice_mailer.send_invoice.subject",
-        number: invoice.invoice_number,
-        invoice_subject: invoice.subject)
-
       @period = @invoice.localized_billing_period
       @payment_url = payment_url_for(invoice) if @client.credit_card?
+      @preheader = t("invoice_mailer.send_invoice.preheader",
+        number: invoice.invoice_number, period: @period, due_date: invoice.due_date)
 
       attachments["invoice_#{invoice.invoice_number}.pdf"] = {
         mime_type: "application/pdf",
@@ -27,7 +25,42 @@ class InvoiceMailer < ApplicationMailer
       mail(
         to: @client.email_with_name,
         bcc: @business.email,
-        subject: @subject_line
+        subject: default_i18n_subject(number: invoice.invoice_number, invoice_subject: invoice.subject)
+      )
+    end
+  end
+
+  def send_reminder(invoice)
+    @invoice = invoice
+    @business = Business.instance
+    @client = invoice.client
+
+    I18n.with_locale(invoice.locale) do
+      @period = @invoice.localized_billing_period
+      @payment_url = payment_url_for(invoice) if @client.credit_card?
+      @preheader = t("invoice_mailer.send_reminder.preheader",
+        number: invoice.invoice_number, due_date: invoice.due_date)
+
+      mail(
+        to: @client.email_with_name,
+        bcc: @business.email,
+        subject: default_i18n_subject(number: invoice.invoice_number, invoice_subject: invoice.subject)
+      )
+    end
+  end
+
+  def send_receipt(invoice)
+    @invoice = invoice
+    @business = Business.instance
+    @client = invoice.client
+
+    I18n.with_locale(invoice.locale) do
+      @preheader = t("invoice_mailer.send_receipt.preheader", number: invoice.invoice_number)
+
+      mail(
+        to: @client.email_with_name,
+        bcc: @business.email,
+        subject: default_i18n_subject(number: invoice.invoice_number, invoice_subject: invoice.subject)
       )
     end
   end

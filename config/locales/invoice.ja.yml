@@ -46,12 +46,29 @@ ja:
     thank_you_body: "請求書 #%{number} のお支払いを確認いたしました。"
 
   invoice_mailer:
+    footer:
+      automated: 本メールは自動送信されています。大切に保管してください。
+    shared:
+      pay_note: クレジットカードによる安全なオンライン決済（Stripe）です。
     send_invoice:
       subject: "請求書 #%{number} — %{invoice_subject}"
+      preheader: "%{period}分のご請求書 #%{number}（お支払い期限：%{due_date}）"
       greeting: "%{client_name} 御中"
       opening: いつもお世話になっております。
-      body: "%{period}分のご請求書（#%{number}、¥%{total}）を添付にてお送りいたします。"
-      due_date: "お支払い期限は%{date}となっております。"
-      bank_instructions: お振込み先は請求書に記載の通りです。
-      stripe_instructions: "クレジットカードでのお支払いはこちらからお願いいたします：%{link}"
+      intro: "%{period}分の%{invoice_subject}に関するご請求書は下記の通りです。"
+      attachment_note: 詳細は添付の請求書（PDF）をご確認ください。
       closing: 引き続きどうぞよろしくお願いいたします。
+    send_reminder:
+      subject: "【再送】請求書 #%{number} — %{invoice_subject}"
+      preheader: "請求書 #%{number} のお支払いに関するご確認（お支払い期限：%{due_date}）"
+      greeting: "%{client_name} 御中"
+      opening: いつもお世話になっております。
+      intro: "%{period}分のご請求書 #%{number} につきまして、お支払いがまだ確認できておりません。下記ご確認いただけますと幸いです。"
+      closing: 行き違いでお支払いお済みの場合は、何卒ご容赦ください。引き続きよろしくお願いいたします。
+    send_receipt:
+      subject: "お支払い確認：請求書 #%{number} — %{invoice_subject}"
+      preheader: "請求書 #%{number} のお支払いを確認いたしました。ありがとうございます。"
+      greeting: "%{client_name} 御中"
+      opening: いつもお世話になっております。
+      intro: "請求書 #%{number} のお支払いを確認いたしました。ありがとうございます。本メールは領収の確認となります。"
+      closing: 今後ともどうぞよろしくお願いいたします。

@@ -1,13 +1,96 @@
+<% business = Business.instance %>
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <style>
-      /* Email styles need to be inline */
-    </style>
-  </head>
+<html lang="<%= I18n.locale %>" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <title><%= @preheader %></title>
+  <%#
+    Email-safe rules — keep these when editing (see the plan's High-Level Technical Design):
+    - Table layout only; inline every visual property. This <style> block is for
+      progressive enhancement (@media responsive + prefers-color-scheme) which
+      several clients strip — never put load-bearing styles here.
+    - Keep critical facts (amount, invoice number, date, pay link) as live HTML
+      text, not images. Palette is a midtone off-black/off-white holding WCAG AA
+      contrast in both light and dark.
+    - Outlook uses Word to render: MSO ghost tables force the 600px width and
+      border-radius is ignored (square corners are acceptable).
+  -%>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    /* Progressive enhancement only — inline styles are the source of truth. */
+    body { margin: 0; padding: 0; width: 100% !important; }
+    a { color: #2563eb; }
+    @media only screen and (max-width: 600px) {
+      .email-card { padding: 24px !important; }
+      .email-pad { padding-left: 24px !important; padding-right: 24px !important; }
+      .amount-hero { font-size: 34px !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .email-bg { background: #0b1220 !important; }
+      .email-card { background: #1f2937 !important; border-color: #374151 !important; }
+      .t-strong { color: #f3f4f6 !important; }
+      .t-body { color: #d1d5db !important; }
+      .t-muted { color: #9ca3af !important; }
+      .email-rule { border-color: #374151 !important; }
+      .brand-name { color: #f3f4f6 !important; }
+    }
+  </style>
+</head>
+<body class="email-bg" style="margin:0; padding:0; width:100%; background-color:#f4f5f7; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  <% if @preheader.present? %>
+    <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#f4f5f7; opacity:0;">
+      <%= @preheader %>
+    </div>
+  <% end %>
 
-  <body>
-    <%= yield %>
-  </body>
+  <table role="presentation" class="email-bg" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f5f7;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <!--[if mso | IE]>
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td>
+        <![endif]-->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; margin:0 auto;">
+          <!-- Header -->
+          <tr>
+            <td class="email-pad" style="padding:8px 8px 20px 8px;">
+              <span class="brand-name t-strong" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif; font-size:18px; font-weight:700; letter-spacing:-0.2px; color:#111827;">
+                <%= business.name %>
+              </span>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td class="email-card" style="background-color:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:32px;">
+              <%= yield %>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="email-pad" style="padding:20px 8px 8px 8px;">
+              <p class="t-muted" style="margin:0 0 4px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;">
+                <strong style="color:#6b7280;"><%= business.name %></strong> &middot; <%= t("invoice.registration_number") %> <%= business.tax_registration_number %>
+              </p>
+              <p class="t-muted" style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif; font-size:12px; line-height:1.6; color:#9ca3af;">
+                <%= t("invoice_mailer.footer.automated") %>
+              </p>
+            </td>
+          </tr>
+        </table>
+        <!--[if mso | IE]>
+        </td></tr></table>
+        <![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
