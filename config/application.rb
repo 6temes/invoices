@@ -22,9 +22,10 @@ module Invoices
     config.middleware.use TraceparentHeaderMiddleware
 
     # SemanticLogger: structured JSON logging to stdout, no file appender
-    config.rails_semantic_logger.add_file_appender = false
     config.rails_semantic_logger.quiet_assets = true
-    config.semantic_logger.add_appender io: $stdout, formatter: :json
+    config.rails_semantic_logger.appenders do |appenders|
+      appenders.add io: $stdout, formatter: :json
+    end
 
     # Inject request_id and OTel trace context into all log lines
     config.log_tags = {
