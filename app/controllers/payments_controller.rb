@@ -6,6 +6,7 @@ class PaymentsController < ApplicationController
   rate_limit to: 5, within: 1.minute, only: :create, by: -> { request.remote_ip },
     with: -> { redirect_to public_payment_path(params[:token]), alert: t("invoice.payment_error") }
 
+  before_action :set_business
   before_action :set_invoice
 
   def show
@@ -25,10 +26,14 @@ class PaymentsController < ApplicationController
 
   private
 
+  def set_business
+    @business = Business.instance
+  end
+
   def set_invoice
     @invoice = Invoice.find_signed!(params[:token], purpose: :payment)
   rescue ActiveSupport::MessageVerifier::InvalidSignature
-    render plain: "Invalid or expired payment link.", status: :not_found
+    render :invalid_link, status: :not_found
   end
 
   def find_or_create_checkout_session

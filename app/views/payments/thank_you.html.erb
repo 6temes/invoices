@@ -1,6 +1,6 @@
 <% I18n.with_locale(@invoice.locale) do %>
-  <div class="card" style="text-align: center; padding: 2rem;">
-    <h1 style="color: var(--color-success);">
+  <div class="card payment-card">
+    <h1 class="text-success">
       <%= t("invoice.thank_you_title") %>
     </h1>
 
@@ -8,9 +8,9 @@
       <%= t("invoice.thank_you_body", number: @invoice.invoice_number) %>
     </p>
 
-    <div class="summary-card" style="margin: 2rem auto; max-width: 300px;">
+    <div class="summary-card payment-amount">
       <div class="summary-card-label"><%= t("invoice.paid_stamp") %></div>
-      <div class="summary-card-value" style="color: var(--color-success);">¥<%= number_with_delimiter @invoice.paid_amount %></div>
+      <div class="summary-card-value text-success">¥<%= number_with_delimiter @invoice.paid_amount %></div>
     </div>
   </div>
 <% end %>

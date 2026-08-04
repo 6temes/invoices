@@ -1,9 +1,9 @@
 <% I18n.with_locale(@invoice.locale) do %>
-  <div class="card" style="text-align: center; padding: 2rem;">
-    <h1 style="margin-bottom: 0.5rem;"><%= t("invoice.document_title") %> #<%= @invoice.invoice_number %></h1>
+  <div class="card payment-card">
+    <h1><%= t("invoice.document_title") %> #<%= @invoice.invoice_number %></h1>
     <p class="text-muted"><%= @invoice.client.name %></p>
 
-    <div class="summary-card" style="margin: 2rem auto; max-width: 300px;">
+    <div class="summary-card payment-amount">
       <div class="summary-card-label"><%= t("invoice.amount_due") %></div>
       <div class="summary-card-value">¥<%= number_with_delimiter @invoice.total %></div>
     </div>
@@ -21,19 +21,28 @@
     <% if @invoice.sent? && @invoice.client.credit_card? %>
       <div class="mt-3">
         <%= form_with url: public_payment_create_path(params[:token]), method: :post do %>
-          <%= submit_tag(
-            t("invoice.pay_with_credit_card"),
-            class: "btn btn-accent",
-            style: "font-size: 16px; padding: 0.75rem 2rem;",
-            data: { turbo_submits_with: t("invoice.pay_with_credit_card") + "..." }
-          ) %>
+          <%= submit_tag t("invoice.pay_with_credit_card"), class: "btn btn-accent btn-lg" %>
         <% end %>
       </div>
     <% elsif @invoice.sent? %>
-      <div class="mt-2">
-        <p class="text-muted">
-          <%= t("invoice.transfer_instructions") %>
-        </p>
+      <div class="bank-transfer">
+        <p class="bank-transfer-intro"><%= t("invoice.bank_transfer_instructions") %></p>
+        <dl class="bank-rows">
+          <dt><%= t("invoice.bank_name") %></dt>
+          <dd><%= @business.bank_name %></dd>
+
+          <dt><%= t("invoice.bank_branch") %></dt>
+          <dd><%= @business.bank_branch %></dd>
+
+          <dt><%= t("invoice.bank_account_type") %></dt>
+          <dd><%= @business.bank_account_type %></dd>
+
+          <dt><%= t("invoice.bank_account_number") %></dt>
+          <dd class="bank-num"><%= @business.bank_account_number %></dd>
+
+          <dt><%= t("invoice.bank_account_holder") %></dt>
+          <dd class="bank-holder"><%= @business.bank_account_holder %></dd>
+        </dl>
       </div>
     <% end %>
   </div>

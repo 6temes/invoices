@@ -262,6 +262,11 @@ h3 { font-size: 16px; }
   font-size: 12px;
 }
 
+.btn-lg {
+  padding: 0.75rem 2rem;
+  font-size: 16px;
+}
+
 .btn-group {
   display: flex;
   gap: 0.5rem;
@@ -304,6 +309,10 @@ tr:hover td {
 
 .text-muted {
   color: var(--color-text-muted);
+}
+
+.text-success {
+  color: var(--color-success);
 }
 
 .text-mono {
@@ -784,6 +793,71 @@ turbo-frame#address-country-fields[busy] {
   text-align: center;
   margin-top: 1.25rem;
   font-size: 13px;
+}
+
+/* --- Payment Page --- */
+
+/* These three override .container / .card / .summary-card, so they must stay
+   below them in the file: equal specificity, source order decides. */
+.public-main {
+  max-width: 600px;
+  margin: 3rem auto;
+}
+
+.payment-card {
+  padding: 2rem;
+  text-align: center;
+}
+
+.payment-amount {
+  max-width: 300px;
+  margin: 2rem auto;
+}
+
+/* Left-aligned inside the centred card: these values get transcribed into a
+   bank form, and centred label/value pairs are hard to scan digit by digit. */
+.bank-transfer {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.bank-transfer-intro {
+  margin: 0 0 1rem;
+  color: var(--color-text-muted);
+}
+
+.bank-rows {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, max-content) 1fr;
+  gap: 0.6rem 1.5rem;
+  margin: 0;
+}
+
+.bank-rows dt {
+  align-self: baseline;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.bank-rows dd {
+  margin: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.bank-num {
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+/* A mismatched account holder is the most common reason a transfer bounces. */
+.bank-holder {
+  font-weight: 600;
 }
 
 /* --- Hamburger Toggle --- */

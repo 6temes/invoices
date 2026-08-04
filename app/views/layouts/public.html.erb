@@ -5,11 +5,22 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <%# No javascript_importmap_tags, deliberately. These pages are
+        unauthenticated and externally reachable, and need no JS: the pay button
+        is a plain form POST, and PaymentsController#find_or_create_checkout_session
+        reuses an open Stripe session, so a double submit cannot mint two.
+        Anything rendered in this layout must work without JS. %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
   </head>
 
   <body>
-    <main class="container" style="max-width: 600px; margin: 3rem auto;">
+    <main class="container public-main">
+      <%# Plain markup, not shared/flash: the partial's Stimulus dismiss
+          controller would never connect. See the note on importmap below. %>
+      <% if flash[:alert] %>
+        <div class="flash flash-alert"><%= flash[:alert] %></div>
+      <% end %>
+
       <%= yield %>
     </main>
   </body>

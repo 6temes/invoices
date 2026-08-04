@@ -12,7 +12,7 @@ class InvoiceMailerTest < ActionMailer::TestCase
     email = InvoiceMailer.send_invoice(english_invoice)
 
     assert_equal [ "billing@acme.example.com" ], email.to
-    expected_subject = "Invoice ##{english_invoice.invoice_number} — Software Development Services"
+    expected_subject = "Invoice ##{english_invoice.invoice_number}: Software Development Services"
     assert_equal expected_subject, email.subject
   end
 
@@ -23,7 +23,7 @@ class InvoiceMailerTest < ActionMailer::TestCase
     email = InvoiceMailer.send_invoice(invoice)
 
     assert_equal [ "keiri@sakura.example.jp" ], email.to
-    expected_subject = "請求書 ##{invoice.invoice_number} — ソフトウェア開発"
+    expected_subject = "請求書 ##{invoice.invoice_number}：ソフトウェア開発"
     assert_equal expected_subject, email.subject
   end
 

@@ -1,6 +1,10 @@
 class Invoice < ApplicationRecord
   class InvalidStatusError < StandardError; end
 
+  # Stated on the expired-link page, so it has to live somewhere both it and the
+  # mailer can read.
+  PAYMENT_LINK_VALIDITY = 60.days
+
   has_paper_trail skip: %i[created_at updated_at]
 
   broadcasts_refreshes

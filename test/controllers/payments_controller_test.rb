@@ -28,11 +28,33 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: /Thank you/i
   end
 
+  test "show lists the bank details for bank transfer clients" do
+    clients(:sakura).update! payment_method: "bank_transfer", stripe_customer_id: nil
+    business = businesses(:default)
+
+    get public_payment_path(token: @token)
+
+    assert_response :success
+    assert_select ".bank-rows dd", text: business.bank_account_number
+    assert_select ".bank-rows dd", text: business.bank_account_holder
+    assert_select ".bank-rows dd", text: business.bank_branch
+    assert_select "input[type=submit]", count: 0
+  end
+
+  test "show offers the card button instead of bank details for card clients" do
+    get public_payment_path(token: @token)
+
+    assert_response :success
+    assert_select ".bank-rows", count: 0
+    assert_select "input[type=submit]"
+  end
+
   test "invalid token returns not_found" do
     get public_payment_path(token: "invalid-token")
 
     assert_response :not_found
-    assert_includes response.body, "Invalid or expired payment link"
+    assert_select "h1", text: /no longer valid/
+    assert_select "a[href=?]", "mailto:#{businesses(:default).email}"
   end
 
   test "expired token returns not_found" do
@@ -42,7 +64,7 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
       get public_payment_path(token:)
 
       assert_response :not_found
-      assert_includes response.body, "Invalid or expired payment link"
+      assert_select "h1", text: /no longer valid/
     end
   end
 
@@ -110,6 +132,9 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to public_payment_path(@token)
     assert_equal I18n.t("invoice.payment_error", locale: @invoice.locale), flash[:alert]
+
+    follow_redirect!
+    assert_select ".flash-alert", text: /#{I18n.t("invoice.payment_error", locale: @invoice.locale)}/
   end
 
   test "create redirects non-sent invoices without calling Stripe" do
