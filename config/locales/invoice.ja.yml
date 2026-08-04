@@ -33,11 +33,9 @@ ja:
     bank_account_number: 口座番号
     pay_with_credit_card: クレジットカードで支払う
     payment_error: "お支払い処理中にエラーが発生しました。数分後にもう一度お試しください。"
-    transfer_instructions: お振込み先は請求書に記載の通りです。
-    page_numbering: "%{page} / %{total} ページ"
     retainer_subject: ウェブ開発・保守
     retainer_subject_with_infrastructure: ウェブ開発・保守・サーバーインフラ
-    retainer_line: "%{subject}の月額リテイナー（%{hours}時間含む） — %{period}"
+    retainer_line: "%{period}分の%{subject}月額リテイナー（%{hours}時間含む）"
     extra_hours_with_desc: "追加開発: %{description}（%{hours}時間）"
     extra_hours_generic: "リテイナー超過分の追加開発（%{hours}時間）"
     month_year: "%{year}年%{month}月"
@@ -47,11 +45,11 @@ ja:
 
   invoice_mailer:
     footer:
-      automated: 本メールは自動送信されています。大切に保管してください。
+      automated: 本メールは自動送信されています。
     shared:
-      pay_note: クレジットカードによる安全なオンライン決済（Stripe）です。
+      pay_note: カード決済はStripeが処理します。
     send_invoice:
-      subject: "請求書 #%{number} — %{invoice_subject}"
+      subject: "請求書 #%{number}：%{invoice_subject}"
       preheader: "%{period}分のご請求書 #%{number}（お支払い期限：%{due_date}）"
       greeting: "%{client_name} 御中"
       opening: いつもお世話になっております。
@@ -59,16 +57,16 @@ ja:
       attachment_note: 詳細は添付の請求書（PDF）をご確認ください。
       closing: 引き続きどうぞよろしくお願いいたします。
     send_reminder:
-      subject: "【再送】請求書 #%{number} — %{invoice_subject}"
+      subject: "【ご確認のお願い】請求書 #%{number}（%{invoice_subject}）"
       preheader: "請求書 #%{number} のお支払いに関するご確認（お支払い期限：%{due_date}）"
       greeting: "%{client_name} 御中"
       opening: いつもお世話になっております。
       intro: "%{period}分のご請求書 #%{number} につきまして、お支払いがまだ確認できておりません。下記ご確認いただけますと幸いです。"
       closing: 行き違いでお支払いお済みの場合は、何卒ご容赦ください。引き続きよろしくお願いいたします。
     send_receipt:
-      subject: "お支払い確認：請求書 #%{number} — %{invoice_subject}"
-      preheader: "請求書 #%{number} のお支払いを確認いたしました。ありがとうございます。"
+      subject: "お支払い確認：請求書 #%{number}（%{invoice_subject}）"
+      preheader: "請求書 #%{number} のお支払いを確認いたしました。"
       greeting: "%{client_name} 御中"
       opening: いつもお世話になっております。
-      intro: "請求書 #%{number} のお支払いを確認いたしました。ありがとうございます。本メールは領収の確認となります。"
+      intro: "請求書 #%{number} のお支払いを確認いたしました。ありがとうございます。"
       closing: 今後ともどうぞよろしくお願いいたします。

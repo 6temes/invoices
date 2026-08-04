@@ -68,7 +68,7 @@ class InvoiceMailer < ApplicationMailer
   private
 
   def payment_url_for(invoice)
-    token = invoice.signed_id(purpose: :payment, expires_in: 60.days)
+    token = invoice.signed_id(purpose: :payment, expires_in: Invoice::PAYMENT_LINK_VALIDITY)
     public_payment_url(token:)
   end
 end

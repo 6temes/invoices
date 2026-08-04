@@ -32,12 +32,10 @@ en:
     bank_account_type: Account Type
     bank_account_number: Account No.
     pay_with_credit_card: Pay with Credit Card
-    payment_error: "Something went wrong with your payment. Please try again in a few minutes."
-    transfer_instructions: Transfer details are included in the attached invoice.
-    page_numbering: "Page %{page} of %{total}"
+    payment_error: "The payment could not be processed. Please try again in a few minutes."
     retainer_subject: Web development and maintenance
     retainer_subject_with_infrastructure: Web development, maintenance, and server infrastructure
-    retainer_line: "Monthly retainer for %{subject} (includes %{hours} hours) — %{period}"
+    retainer_line: "Monthly retainer for %{subject}, %{period} (includes %{hours} hours)"
     extra_hours_with_desc: "Additional development: %{description} (%{hours}h)"
     extra_hours_generic: "Additional development hours beyond retainer (%{hours}h)"
     month_year: "%{month_name} %{year}"
@@ -47,28 +45,28 @@ en:
 
   invoice_mailer:
     footer:
-      automated: "This is an automated message — please keep it for your records."
+      automated: "This message was sent automatically."
     shared:
-      pay_note: "Secure online payment by credit card, powered by Stripe."
+      pay_note: "Card payments are processed by Stripe."
     send_invoice:
-      subject: "Invoice #%{number} — %{invoice_subject}"
+      subject: "Invoice #%{number}: %{invoice_subject}"
       preheader: "Invoice #%{number} for %{period}, due %{due_date}."
       greeting: "Hi %{client_name},"
-      intro: "Please find your invoice for %{invoice_subject}, covering %{period}, summarized below."
-      attachment_note: "The complete invoice is attached as a PDF for your records."
-      closing: "Thank you for your continued partnership."
+      intro: "Here is your invoice for %{invoice_subject}, covering %{period}."
+      attachment_note: "The full invoice is attached as a PDF."
+      closing: "Let me know if anything looks wrong."
       signature: "Best regards,"
     send_reminder:
-      subject: "Reminder: invoice #%{number} — %{invoice_subject}"
-      preheader: "A quick reminder about invoice #%{number}, due %{due_date}."
+      subject: "Reminder: invoice #%{number} (%{invoice_subject})"
+      preheader: "Invoice #%{number} is still open, due %{due_date}."
       greeting: "Hi %{client_name},"
-      intro: "Just a friendly reminder that invoice #%{number} for %{period} is still awaiting payment. The details are below."
-      closing: "If you have already sent payment, please disregard this message — and thank you."
+      intro: "A quick note that invoice #%{number} for %{period} is still open."
+      closing: "If it is already on its way, please ignore this message."
       signature: "Best regards,"
     send_receipt:
-      subject: "Payment received: invoice #%{number} — %{invoice_subject}"
-      preheader: "Payment received for invoice #%{number} — thank you!"
+      subject: "Payment received: invoice #%{number} (%{invoice_subject})"
+      preheader: "Payment received for invoice #%{number}."
       greeting: "Hi %{client_name},"
-      intro: "Thank you — we have received your payment for invoice #%{number}. This email confirms it for your records."
-      closing: "Thank you for your business."
+      intro: "I've received your payment for invoice #%{number}."
+      closing: "Thank you."
       signature: "Best regards,"

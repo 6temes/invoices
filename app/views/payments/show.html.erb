@@ -24,16 +24,29 @@
           <%= submit_tag(
             t("invoice.pay_with_credit_card"),
             class: "btn btn-accent",
-            style: "font-size: 16px; padding: 0.75rem 2rem;",
-            data: { turbo_submits_with: t("invoice.pay_with_credit_card") + "..." }
+            style: "font-size: 16px; padding: 0.75rem 2rem;"
           ) %>
         <% end %>
       </div>
     <% elsif @invoice.sent? %>
-      <div class="mt-2">
-        <p class="text-muted">
-          <%= t("invoice.transfer_instructions") %>
-        </p>
+      <div class="bank-transfer">
+        <p class="bank-transfer-intro"><%= t("invoice.bank_transfer_instructions") %></p>
+        <dl class="bank-rows">
+          <dt><%= t("invoice.bank_name") %></dt>
+          <dd><%= @business.bank_name %></dd>
+
+          <dt><%= t("invoice.bank_branch") %></dt>
+          <dd><%= @business.bank_branch %></dd>
+
+          <dt><%= t("invoice.bank_account_type") %></dt>
+          <dd><%= @business.bank_account_type %></dd>
+
+          <dt><%= t("invoice.bank_account_number") %></dt>
+          <dd class="bank-num"><%= @business.bank_account_number %></dd>
+
+          <dt><%= t("invoice.bank_account_holder") %></dt>
+          <dd class="bank-holder"><%= @business.bank_account_holder %></dd>
+        </dl>
       </div>
     <% end %>
   </div>

@@ -1,0 +1,12 @@
+<%# No invoice resolved, so no client locale to render in. English only. %>
+<div class="card" style="text-align: center; padding: 2rem;">
+  <h1>This payment link is no longer valid</h1>
+
+  <p class="mt-2 text-muted">
+    Payment links expire <%= distance_of_time_in_words 0, Invoice::PAYMENT_LINK_VALIDITY %> after an invoice is sent.
+  </p>
+
+  <p class="mt-2">
+    Email <%= mail_to @business.email %> and I'll send you a new one.
+  </p>
+</div>
