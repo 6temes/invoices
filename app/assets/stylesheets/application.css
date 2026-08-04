@@ -262,6 +262,11 @@ h3 { font-size: 16px; }
   font-size: 12px;
 }
 
+.btn-lg {
+  padding: 0.75rem 2rem;
+  font-size: 16px;
+}
+
 .btn-group {
   display: flex;
   gap: 0.5rem;
@@ -304,6 +309,10 @@ tr:hover td {
 
 .text-muted {
   color: var(--color-text-muted);
+}
+
+.text-success {
+  color: var(--color-success);
 }
 
 .text-mono {
@@ -787,6 +796,23 @@ turbo-frame#address-country-fields[busy] {
 }
 
 /* --- Payment Page --- */
+
+/* These three override .container / .card / .summary-card, so they must stay
+   below them in the file: equal specificity, source order decides. */
+.public-main {
+  max-width: 600px;
+  margin: 3rem auto;
+}
+
+.payment-card {
+  padding: 2rem;
+  text-align: center;
+}
+
+.payment-amount {
+  max-width: 300px;
+  margin: 2rem auto;
+}
 
 /* Left-aligned inside the centred card: these values get transcribed into a
    bank form, and centred label/value pairs are hard to scan digit by digit. */
