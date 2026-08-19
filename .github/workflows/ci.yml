@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  scan_ruby:
+  brakeman:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -26,7 +26,7 @@ jobs:
       - name: Scan for common Rails security vulnerabilities using static analysis
         run: bin/brakeman --no-pager
       
-  scan_js:
+  importmap-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
