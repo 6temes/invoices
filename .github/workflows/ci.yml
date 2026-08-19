@@ -1,13 +1,18 @@
 name: CI
 
-on:
-  pull_request:
-  push:
-    branches: [ main ]
+on: push
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
 
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -23,6 +28,7 @@ jobs:
       
   scan_js:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -38,6 +44,7 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       RUBOCOP_CACHE_ROOT: tmp/rubocop
     steps:
@@ -50,7 +57,7 @@ jobs:
           bundler-cache: true
 
       - name: Prepare RuboCop cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         env:
           DEPENDENCIES_HASH: ${{ hashFiles('.ruby-version', '**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}
         with:
@@ -64,6 +71,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     # services:
     #  redis:
@@ -89,6 +97,7 @@ jobs:
 
   system-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     # services:
     #  redis:
@@ -123,10 +132,11 @@ jobs:
   validate-ubl:
     continue-on-error: true
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       phorm:
-        image: phelger/phorm:latest
+        image: phelger/phorm:2.2.5
         ports:
           - 8080:8080
         options: --health-cmd "curl -sf http://localhost:8080/ || exit 1" --health-interval 10s --health-timeout 5s --health-retries 10 --health-start-period 30s
