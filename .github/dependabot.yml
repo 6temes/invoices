@@ -9,6 +9,9 @@ updates:
       timezone: 'Asia/Tokyo'
     assignees:
       - '6temes'
+    labels:
+      - 'dependencies'
+      - 'ruby'
     groups:
       minor-and-patch:
         patterns:
@@ -25,4 +28,8 @@ updates:
       day: 'monday'
       time: '06:00'
       timezone: 'Asia/Tokyo'
-
+    assignees:
+      - '6temes'
+    labels:
+      - 'dependencies'
+      - 'github-actions'
