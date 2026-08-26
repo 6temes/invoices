@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+
+# `kamal deploy` never recreates accessories, so prometheus-exporter keeps whatever
+# `:latest` resolved to when it was last booted. Once no app container references
+# that build, prune's `docker rmi` of its final tag hits an in-use conflict and
+# fails the deploy (basecamp/kamal#1799).
+#
+# Not `accessory reboot`: it re-pulls, which needs the registry reachable from the
+# host at hook time. App boot has already retagged the host's `:latest` to this
+# version, so the image is there.
+kamal accessory stop prometheus-exporter
+kamal accessory remove_container prometheus-exporter
+kamal accessory boot prometheus-exporter
