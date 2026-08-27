@@ -10,9 +10,12 @@ servers:
     hosts:
       - <%= ENV["DEPLOY_HOST"] %>
     options:
+      # Reap orphaned child processes rather than letting zombies accumulate
+      # under the Rails process as PID 1.
+      init: true
       # Cap the container so a runaway invoices process (leak, big report)
-      # is OOM-killed alone instead of taking down the 3.8 GB host and its
-      # neighbours (hydra, kamal-proxy). Matches hydra's limit.
+      # is OOM-killed alone instead of taking down the 7 GB host and its
+      # neighbours (hydra, edu, kamal-proxy).
       memory: 1g
 
 ssh:
