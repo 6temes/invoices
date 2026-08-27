@@ -89,12 +89,10 @@ jobs:
             >> ~/.ssh/config
 
       - name: Deploy
-        id: deploy
         run: kamal deploy
-        continue-on-error: true # Prune can fail non-fatally (basecamp/kamal#1799)
 
       - name: Verify deployment
-        run: ssh "deploy@$DEPLOY_HOST" "docker ps --filter label=service=invoices --filter status=running --format '{{.Names}}'" | grep -q "${{ env.DEPLOY_SHA }}"
+        run: ssh "deploy@$DEPLOY_HOST" "docker ps --filter label=service=invoices --filter status=running --format '{{.Names}}'" | grep -q "$DEPLOY_SHA"
 
       - name: Mark deployment successful
         if: success()
