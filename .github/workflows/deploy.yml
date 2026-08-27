@@ -30,6 +30,19 @@ jobs:
       LITESTREAM_SFTP_USER: ${{ secrets.LITESTREAM_SFTP_USER }}
 
     steps:
+      # An empty METRICS_BIND_IP renders the accessory ports as ':9394:9394' — a
+      # 0.0.0.0 bind that Docker's DNAT publishes past UFW. Fail the deploy instead.
+      - name: Preflight required secrets
+        run: |
+          missing=0
+          for var in DEPLOY_HOST DEPLOY_SSH_PORT METRICS_BIND_IP WG_MAINFRAME_IP LITESTREAM_SFTP_USER RAILS_MASTER_KEY; do
+            if [ -z "${!var}" ]; then
+              echo "::error::Required secret/var $var is empty"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Create GitHub deployment
         id: deployment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
