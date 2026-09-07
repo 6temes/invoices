@@ -81,6 +81,11 @@ class ClientsSystemTest < ApplicationSystemTestCase
     fill_in "Description (optional — ticket reference)", with: "#999 — QA test entry"
     click_button "Save"
 
+    # The turbo_stream response prepends this flash. Waiting on it is what makes
+    # the create actually complete — without it the visit below can navigate away
+    # mid-request, and the row never gets written.
+    assert_text "Extra hours logged."
+
     visit client_path(clients(:acme))
 
     within "#unbilled_extra_hours" do

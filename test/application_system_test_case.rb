@@ -27,12 +27,18 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # link or firing a Stimulus action before they're wired up is the root cause of
   # this suite's historical flakiness.
   #
-  # We poll for: document fully loaded, Turbo present (so Turbo Drive intercepts
-  # link clicks), Stimulus present, and every on-page controller connected. A
-  # transient JavascriptError (JS context torn down mid-navigation) means "not
-  # ready yet" and is retried per-poll — it must never abandon the whole wait,
-  # which is exactly the bug that let tests race ahead. The 15s cap is headroom
-  # for slow CI loads; the common case exits in well under a second.
+  # We poll for: document fully loaded, Turbo's session started, Stimulus
+  # present, and every on-page controller connected. A transient JavascriptError
+  # (JS context torn down mid-navigation) means "not ready yet" and is retried
+  # per-poll — it must never abandon the whole wait, which is exactly the bug
+  # that let tests race ahead. The 15s cap is headroom for slow CI loads; the
+  # common case exits in well under a second.
+  #
+  # Turbo's session, not just the global: window.Turbo is assigned before
+  # start() runs, and start() is what installs the click and submit listeners.
+  # Waiting on the global alone let a click reach a page Turbo was not yet
+  # intercepting, so a button_to submitted natively and its turbo_confirm dialog
+  # never opened.
   def wait_for_page_ready
     Timeout.timeout(15) do
       sleep 0.05 until page_ready?
@@ -45,7 +51,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   def page_ready?
     page.evaluate_script(<<~JS)
       document.readyState === 'complete' &&
-      typeof window.Turbo !== 'undefined' &&
+      window.Turbo?.session?.started === true &&
       typeof window.Stimulus !== 'undefined' &&
       [...document.querySelectorAll('[data-controller]')].every(el =>
         el.dataset.controller.split(' ').every(id =>
