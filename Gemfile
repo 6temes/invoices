@@ -17,6 +17,11 @@ gem "stimulus-rails"
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"
 
+# Pin below 3.x: JSON.parse there is keyword-only and breaks
+# ActiveSupport::JSON.decode's positional-hash call (used by signed cookies /
+# MessageVerifier), which is otherwise pulled in transitively.
+gem "json", "< 3"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
