@@ -1,6 +1,9 @@
 module Authentication
   extend ActiveSupport::Concern
 
+  # Named after a linked worktree in development, like the session cookie.
+  COOKIE = [ "session_id", (Worktree.identity(Rails.root.to_s) if Rails.env.development?) ].compact.join("_")
+
   included do
     before_action :require_authentication
     helper_method :authenticated?
@@ -26,7 +29,7 @@ module Authentication
     end
 
     def find_session_by_cookie
-      Session.find_by(id: cookies.signed[:session_id]) if cookies.signed[:session_id]
+      Session.find_by(id: cookies.signed[COOKIE]) if cookies.signed[COOKIE]
     end
 
     def request_authentication
@@ -44,12 +47,12 @@ module Authentication
     def start_new_session_for(user)
       user.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         Current.session = session
-        cookies.signed[:session_id] = { value: session.id, httponly: true, same_site: :strict, secure: Rails.env.production?, expires: 30.days }
+        cookies.signed[COOKIE] = { value: session.id, httponly: true, same_site: :strict, secure: Rails.env.production?, expires: 30.days }
       end
     end
 
     def terminate_session
       Current.session.destroy
-      cookies.delete(:session_id)
+      cookies.delete(COOKIE)
     end
 end
