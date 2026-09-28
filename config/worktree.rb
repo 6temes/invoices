@@ -2,7 +2,6 @@ require "digest"
 
 # A linked git worktree (its `.git` is a file) gets a port and database names derived from its
 # checkout path, so several checkouts can run at once; the main checkout keeps the defaults.
-# The herdr worktree-setup plugin derives the same identity, so the formula must stay in step.
 module Worktree
   module_function
 
