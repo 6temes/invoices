@@ -54,9 +54,10 @@ class InvoicePaymentsSystemTest < ApplicationSystemTestCase
   # label that is still there two seconds later means nothing was sent and the click is
   # safe to repeat.
   def submit_with(label)
+    submit = "#slideover_frame input[type=submit][value='#{label}']"
     3.times do
-      find_button(label, wait: 0).click
-      return if page.has_no_button?(label, wait: 2)
+      find(submit, wait: 0).click
+      return if page.has_no_css?(submit, wait: 2)
     end
     flunk "clicking #{label.inspect} never started a submit"
   end
