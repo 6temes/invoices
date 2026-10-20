@@ -1,5 +1,21 @@
 Rails.application.routes.draw do
   mount RailsInformant::Engine => "/informant"
+
+  if Rails.env.development?
+    # Hyperdrive's MCP endpoint runs arbitrary Ruby with no authentication, and the gem
+    # itself only rejects foreign browser Origins. A tunnel delivers requests from
+    # 127.0.0.1 too, so this reads the raw socket address and Host header (request.host
+    # and remote_ip trust X-Forwarded-*) and refuses anything a proxy forwarded.
+    forwarded = %w[HTTP_FORWARDED HTTP_X_FORWARDED_FOR HTTP_X_FORWARDED_HOST HTTP_CF_CONNECTING_IP]
+    direct_loopback = lambda do |request|
+      request.remote_addr.in?(%w[127.0.0.1 ::1]) &&
+        request.get_header("HTTP_HOST").to_s.sub(/:\d+\z/, "").in?(%w[localhost 127.0.0.1 [::1]]) &&
+        forwarded.none? { request.has_header? it }
+    end
+    constraints direct_loopback do
+      mount Rails::Hyperdrive::Engine => "/_hyperdrive"
+    end
+  end
   mount MissionControl::Jobs::Engine, at: "/jobs"
   resource :session, only: [ :new, :create, :destroy ]
   resources :passwords, param: :token, only: [ :new, :create, :edit, :update ]

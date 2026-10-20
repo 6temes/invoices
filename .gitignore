@@ -40,3 +40,4 @@
 /vendor/schematron/
 /vendor/xsd/
 
+.hyperdrive/discover_cache.json

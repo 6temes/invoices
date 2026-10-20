@@ -227,6 +227,7 @@ GEM
       addressable (~> 2.8)
       childprocess (~> 5.0)
       logger (~> 1.6)
+    layered-rails-skills (3.1.0)
     letter_opener (1.10.0)
       launchy (>= 2.2, < 4)
     lint_roller (1.1.0)
@@ -397,6 +398,11 @@ GEM
     rails-html-sanitizer (1.7.1)
       loofah (~> 2.25, >= 2.25.2)
       nokogiri (>= 1.15.7, != 1.16.7, != 1.16.6, != 1.16.5, != 1.16.4, != 1.16.3, != 1.16.2, != 1.16.1, != 1.16.0.rc1, != 1.16.0)
+    rails-hyperdrive (0.10.1)
+      activerecord (>= 7.2)
+      bundler (>= 2.3)
+      mcp (>= 0.25)
+      railties (>= 7.2)
     rails-informant (0.5.3)
       actionpack (>= 8.1)
       activejob (>= 8.1)
@@ -577,6 +583,7 @@ DEPENDENCIES
   importmap-rails
   json (< 3)
   kamal
+  layered-rails-skills
   letter_opener
   mission_control-jobs
   mocha
@@ -594,6 +601,7 @@ DEPENDENCIES
   propshaft
   puma (>= 5.0)
   rails (~> 8.1.2)
+  rails-hyperdrive
   rails-informant
   rails_semantic_logger
   reactionview (~> 0.2.1)
