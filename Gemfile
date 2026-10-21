@@ -65,6 +65,10 @@ group :development do
   gem "web-console"
   # Preview emails in the browser instead of sending
   gem "letter_opener"
+
+  # Live MCP server for coding agents, plus agent skills shipped by bundled gems
+  gem "layered-rails-skills"
+  gem "rails-hyperdrive"
 end
 
 group :test do

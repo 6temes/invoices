@@ -2,6 +2,10 @@
   "mcpServers": {
     "informant": {
       "command": "informant-mcp"
+    },
+    "rails-hyperdrive": {
+      "url": "http://localhost:3000/_hyperdrive/mcp",
+      "type": "http"
     }
   }
 }
