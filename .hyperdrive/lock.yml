@@ -51,6 +51,11 @@ files:
   source: layered-rails-skills@3.1.0
   source_sha: 2e34670e5d558bdebd6a29fb8bd35526e66feae50bb1a0a7560079c770f1e822
   installed_at: '2026-10-20T10:32:42Z'
+- path: ".claude/skills/informant/SKILL.md"
+  artifact: skill
+  source: rails-informant@0.6.0
+  source_sha: 87a93f2274fb5e93e8593253a4fa76e3785f0c07c21124db72526ccda1ba7c9d
+  installed_at: '2026-10-21T00:41:30Z'
 - path: ".claude/skills/layered-rails/SKILL.md"
   artifact: skill
   source: layered-rails-skills@3.1.0
