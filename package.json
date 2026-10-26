@@ -2,6 +2,6 @@
   "name": "invoices",
   "private": true,
   "devDependencies": {
-    "@herb-tools/linter": "^0.11.0"
+    "@herb-tools/linter": "^0.11.1"
   }
 }
