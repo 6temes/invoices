@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+# Serves the rails-hyperdrive MCP tools over stdio, so each Claude Code session
+# spawns its own copy instead of needing `bin/dev` already up on port 3000.
+
+# Stdout carries the MCP protocol, and SemanticLogger binds its appender to
+# whatever $stdout is at boot, so boot with it pointed at stderr.
+protocol = $stdout
+$stdout = $stderr
+
+require_relative "../config/environment"
+require "rails/hyperdrive/mcp_server"
+require "mcp/server/transports/stdio_transport"
+
+$stdout = protocol
+MCP::Server::Transports::StdioTransport.new(Rails::Hyperdrive::McpServer.server).open
