@@ -10,5 +10,5 @@ chrome_extension:
 read_invoices:
   user: daniel
   token_digest: <%= Digest::SHA256.hexdigest("test_token_read_invoices") %>
-  name: Claude
+  name: Agent
   purpose: read_invoices

@@ -14,7 +14,7 @@ class ApiTokensControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create stores the chosen purpose" do
-    post business_api_tokens_path, params: { api_token: { name: "Claude", purpose: "read_invoices" } }
+    post business_api_tokens_path, params: { api_token: { name: "Agent", purpose: "read_invoices" } }
     assert ApiToken.last.read_invoices?
   end
 
