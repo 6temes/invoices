@@ -9,6 +9,8 @@ module Api
     include ApiTokenAuthentication
     requires_api_token :chrome_extension
 
+    before_action :set_paper_trail_whodunnit
+
     private
 
     def user_for_paper_trail
