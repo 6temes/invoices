@@ -4,6 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Single-tenant Rails 8.1 / Ruby 4.0 invoicing app. SQLite everywhere, no Redis, no Node (Propshaft + importmap). See `README.md` for features and the MCP setup.
 
+## Open source
+
+This repository is public under the MIT license and is meant to be read as a reference for a lean Rails 8 app. Everything committed is published: code, tests, fixtures, seeds, commit messages, PR descriptions and screenshots.
+
+- Use fake data only: example names, `example.com` addresses, placeholder bank and tax numbers.
+- Never commit secrets, API keys, tokens or real customer data. Credentials live in encrypted Rails credentials and deploy secrets, never in plain text.
+- Keep code, copy and docs about the product itself. Don't describe anyone's personal setup, accounting workflow or local machine.
+- Write for an outside reader. Names and comments should make sense to someone who has only the repo.
+
+## Design principles
+
+Write object-oriented Ruby with rich domain models, and use what Rails already ships before adding anything.
+
+- **Behaviour lives in the model.** Domain operations are intention-revealing methods on the record that owns the state, like `invoice.deliver!`, `invoice.mark_as_paid!` and `invoice.retry_delivery!`. They guard their own transitions and raise on misuse. Don't add `app/services`; there is none.
+- **Controllers stay thin.** They authenticate, load records, call one model method and render. Prefer resourceful routes, and model a new action as a nested resource (`resource :payment`) rather than another member action. `InvoicesController` already has member actions; don't add more.
+- **Jobs are shallow wrappers.** `perform` calls a model method. Retry and discard policy belongs in the job's `retry_on`/`discard_on`.
+- **External services sit behind small objects.** HTTP APIs go through `app/gateways/`; document formats are built by `app/builders/`. Models call them; they hold no domain rules.
+- **Enforce invariants where the data lives.** Use validations, callbacks scoped to state, row locks (`with_lock`) and database constraints over checks scattered across controllers.
+- **Use the framework first.** Use Active Record enums, scopes and `Current` attributes. Use Active Storage, Action Mailer with `deliver_later`, and Active Job on Solid Queue. Use `rate_limit` and `has_secure_password`, and the built-in authentication generator's `Session` model. Also `normalizes`, `generates_token_for` and Active Support's date, money and string helpers. Reach for a gem only when Rails has no answer, and never add or remove one without asking.
+- **Vanilla frontend.** Use Turbo and Stimulus over importmap. Don't add a JS build step or a frontend framework. Public payment pages ship no JavaScript.
+- **Name things in the domain's language.** Use verbs for operations (`deliver!`, `record_reminder!`), predicates for state (`billed?`, `can_send_reminder?`) and business-term scopes (`issued`, `open`, `unbilled`).
+
 ## Commands
 
 ```bash
@@ -36,5 +58,4 @@ bin/ci                                       # full local pipeline (config/ci.rb
 - Enums are string-backed: `enum :status, %w[ draft sent ].index_by(&:itself)`. Never integer enums.
 - Minitest with fixtures (`test/fixtures/`), Mocha for stubs, WebMock blocks outbound HTTP.
 - System tests are timing-sensitive; read the notes in `test/application_system_test_case.rb` before blaming app code for a flake.
-- The repo is public: fixtures, seeds and screenshots use fake data only.
 - Merging to `main` deploys automatically (Kamal via GitHub Actions). Never run `bin/kamal deploy` by hand.
