@@ -42,6 +42,16 @@ class ApiTokenTest < ActiveSupport::TestCase
     end
   end
 
+  test "purpose defaults to chrome extension" do
+    token = users(:daniel).api_tokens.create!(name: "Default")
+    assert token.chrome_extension?
+  end
+
+  test "purpose can be read invoices" do
+    token = users(:daniel).api_tokens.create!(name: "Claude", purpose: "read_invoices")
+    assert token.reload.read_invoices?
+  end
+
   test "each created token has a unique digest" do
     token1 = users(:daniel).api_tokens.create!(name: "First")
     token2 = users(:daniel).api_tokens.create!(name: "Second")
