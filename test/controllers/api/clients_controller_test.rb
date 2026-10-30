@@ -21,4 +21,14 @@ class Api::ClientsControllerTest < ActionDispatch::IntegrationTest
     get api_clients_path, headers: { "Authorization" => "Bearer wrong_token" }
     assert_response :unauthorized
   end
+
+  test "refuses a read invoices token" do
+    token = api_tokens(:read_invoices)
+
+    get api_clients_path, headers: { "Authorization" => "Bearer test_token_read_invoices" }
+
+    assert_response :forbidden
+    assert_equal({ "error" => "Forbidden" }, JSON.parse(response.body))
+    assert_nil token.reload.last_used_at
+  end
 end

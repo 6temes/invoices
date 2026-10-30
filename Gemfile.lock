@@ -586,6 +586,7 @@ DEPENDENCIES
   kamal
   layered-rails-skills
   letter_opener
+  mcp
   mission_control-jobs
   mocha
   nokogiri

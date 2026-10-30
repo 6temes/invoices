@@ -39,6 +39,13 @@ class TaxExportsControllerTest < ActionDispatch::IntegrationTest
     assert_includes headers, "status"
   end
 
+  test "csv lists the year's issued invoices and leaves out drafts" do
+    get csv_tax_export_path(year: 2026)
+
+    numbers = CSV.parse(response.body, headers: true).pluck("invoice_number")
+    assert_equal %w[ 145 146 ], numbers.sort
+  end
+
   test "requires authentication" do
     sign_out
     get tax_export_path

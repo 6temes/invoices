@@ -30,6 +30,7 @@ A single-tenant Rails app that runs the billing for one freelance consultancy in
 - **Email Delivery** — sends invoices as PDF attachments via Gmail SMTP
 - **Tax Export** — CSV and ZIP (all PDFs) export by calendar year
 - **Chrome Extension** — log hours directly from GitHub issues, matched to clients by repo
+- **MCP server** — read-only invoice access for AI agents, PDFs included
 - **Bilingual** — invoices render in English or Japanese based on client locale
 
 ## Setup
@@ -72,6 +73,23 @@ Browser ──Hotwire (Turbo + Stimulus)──► Rails 8.1 (Puma)
 
 A recurring job generates the monthly invoices from active retainers on the 1st of each month.
 
+## MCP server
+
+`POST /mcp` serves a read-only [MCP](https://modelcontextprotocol.io) server so any MCP client can read invoices, their PDFs and clients:
+
+- `list_invoices` — a year's issued invoices (never drafts), filterable by client and status
+- `get_invoice` — one invoice by number, with its line items and its PDF and UBL as files
+- `list_clients` — clients with their tax registration numbers
+
+Generate a token with the purpose **Read invoices** on Business Settings (Chrome extension tokens are refused), then point your MCP client at `/mcp` with the token as a bearer header. For example, with Claude Code:
+
+```bash
+claude mcp add --transport http --scope user invoices https://<your-host>/mcp \
+  --header "Authorization: Bearer $INVOICES_TOKEN"
+```
+
+Keep the token out of the repo: no `.mcp.json`, no committed settings.
+
 ## Deployment
 
 Deployed with [Kamal](https://kamal-deploy.org) and Docker to a single VPS, behind a Cloudflare Tunnel. **CI/CD deploys automatically on merge to `main`** (GitHub Actions runs `kamal deploy`); infrastructure values come from GitHub Actions secrets, never from the repo. SQLite databases and Active Storage files persist on a mounted volume.
@@ -92,6 +110,7 @@ Deployed with [Kamal](https://kamal-deploy.org) and Docker to a single VPS, behi
 | Payments | Stripe Checkout |
 | Email | Gmail SMTP (Action Mailer) |
 | Error Monitoring | Rails Informant |
+| Agent Access | MCP (Ruby SDK, Streamable HTTP) |
 | Deployment | Kamal + Docker |
 | CI | GitHub Actions |
 

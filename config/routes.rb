@@ -20,6 +20,8 @@ Rails.application.routes.draw do
   resource :session, only: [ :new, :create, :destroy ]
   resources :passwords, param: :token, only: [ :new, :create, :edit, :update ]
 
+  match "mcp", to: "mcp#create", via: %i[ post get delete ]
+
   resource :business, only: [ :edit, :update ] do
     resources :api_tokens, only: [ :create, :destroy ]
   end

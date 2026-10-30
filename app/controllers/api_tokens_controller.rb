@@ -17,6 +17,6 @@ class ApiTokensController < ApplicationController
   private
 
   def token_params
-    params.expect(api_token: [ :name ])
+    params.expect(api_token: [ :name, :purpose ])
   end
 end

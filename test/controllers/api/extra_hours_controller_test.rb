@@ -21,6 +21,16 @@ class Api::ExtraHoursControllerTest < ActionDispatch::IntegrationTest
     assert_equal "#42 — Fix login bug", body["description"]
   end
 
+  test "create refuses a read invoices token" do
+    assert_no_difference "ExtraHour.count" do
+      post api_extra_hours_path,
+        params: { client_id: clients(:acme).id, hours: 1, description: "x", performed_on: "2026-02-25" },
+        headers: { "Authorization" => "Bearer test_token_read_invoices" },
+        as: :json
+    end
+    assert_response :forbidden
+  end
+
   test "create with invalid params returns errors" do
     post api_extra_hours_path,
       params: { client_id: clients(:acme).id, hours: 0 },

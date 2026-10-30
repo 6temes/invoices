@@ -13,6 +13,17 @@ class ApiTokensControllerTest < ActionDispatch::IntegrationTest
     assert flash[:token].present?, "Expected flash[:token] to contain the plain token"
   end
 
+  test "create stores the chosen purpose" do
+    post business_api_tokens_path, params: { api_token: { name: "Agent", purpose: "read_invoices" } }
+    assert ApiToken.last.read_invoices?
+  end
+
+  test "settings page lists each token's purpose" do
+    get edit_business_path
+    assert_select "td", text: "Chrome extension"
+    assert_select "td", text: "Read invoices"
+  end
+
   test "create shows the plain token in a dialog" do
     post business_api_tokens_path, params: { api_token: { name: "New token" } }
     plain_token = flash[:token]
