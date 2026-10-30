@@ -40,7 +40,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   test "records when the token was used" do
     freeze_time do
       post mcp_path, params: initialize_request, headers: auth, as: :json
-      assert_equal Time.current, api_tokens(:read_invoices).reload.last_used_at
+      assert_equal Time.current, api_tokens(:agent).reload.last_used_at
     end
   end
 
@@ -60,12 +60,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert response.parsed_body["error"] || response.parsed_body.dig("result", "isError")
   end
 
-  test "lists read-only tools" do
+  test "lists tools, with only mark_invoice_paid able to write" do
     post mcp_path, params: { jsonrpc: "2.0", id: 2, method: "tools/list" }, headers: auth, as: :json
 
-    tools = response.parsed_body.dig("result", "tools")
-    assert_equal %w[ get_invoice list_clients list_invoices ], tools.pluck("name").sort
-    assert tools.all? { it.dig("annotations", "readOnlyHint") && !it.dig("annotations", "destructiveHint") }
+    tools = response.parsed_body.dig("result", "tools").index_by { it["name"] }
+    assert_equal %w[ get_invoice list_clients list_invoices mark_invoice_paid ], tools.keys.sort
+    assert_equal %w[ mark_invoice_paid ], tools.reject { _2.dig("annotations", "readOnlyHint") }.keys
+    assert tools.values.none? { it.dig("annotations", "destructiveHint") }
+  end
+
+  test "marks an invoice paid and records the token's owner as the author" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    post mcp_path, params: call_tool("mark_invoice_paid", invoice_number: invoice.invoice_number, paid_on: invoice.issue_date.iso8601), headers: auth, as: :json
+
+    assert invoice.reload.paid?
+    assert_equal users(:daniel).id.to_s, invoice.versions.last.whodunnit
   end
 
   test "rejects listing drafts" do
@@ -101,7 +111,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name:, arguments: } }
   end
 
-  def auth(token = "test_token_read_invoices")
+  def auth(token = "test_token_agent")
     MCP_HEADERS.merge("Authorization" => "Bearer #{token}")
   end
 

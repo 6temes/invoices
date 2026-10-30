@@ -61,9 +61,4 @@ class InvoicePaymentsSystemTest < ApplicationSystemTestCase
     end
     flunk "clicking #{label.inspect} never started a submit"
   end
-
-  def attach_deliverables(invoice)
-    invoice.pdf.attach io: StringIO.new("%PDF-1.4"), filename: "test.pdf", content_type: "application/pdf"
-    invoice.ubl_xml.attach io: StringIO.new("<Invoice/>"), filename: "test.xml", content_type: "application/xml"
-  end
 end

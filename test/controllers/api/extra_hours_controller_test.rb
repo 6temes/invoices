@@ -25,7 +25,7 @@ class Api::ExtraHoursControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference "ExtraHour.count" do
       post api_extra_hours_path,
         params: { client_id: clients(:acme).id, hours: 1, description: "x", performed_on: "2026-02-25" },
-        headers: { "Authorization" => "Bearer test_token_read_invoices" },
+        headers: { "Authorization" => "Bearer test_token_agent" },
         as: :json
     end
     assert_response :forbidden

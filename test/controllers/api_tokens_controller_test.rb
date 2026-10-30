@@ -14,14 +14,14 @@ class ApiTokensControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create stores the chosen purpose" do
-    post business_api_tokens_path, params: { api_token: { name: "Agent", purpose: "read_invoices" } }
-    assert ApiToken.last.read_invoices?
+    post business_api_tokens_path, params: { api_token: { name: "Agent", purpose: "agent" } }
+    assert ApiToken.last.agent?
   end
 
   test "settings page lists each token's purpose" do
     get edit_business_path
     assert_select "td", text: "Chrome extension"
-    assert_select "td", text: "Read invoices"
+    assert_select "td", text: "Agent"
   end
 
   test "create shows the plain token in a dialog" do

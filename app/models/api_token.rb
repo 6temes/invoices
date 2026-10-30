@@ -1,7 +1,7 @@
 class ApiToken < ApplicationRecord
   belongs_to :user
 
-  enum :purpose, %w[ chrome_extension read_invoices ].index_by(&:itself)
+  enum :purpose, %w[ chrome_extension agent ].index_by(&:itself)
 
   validates :name, presence: true
   validates :token_digest, presence: true, uniqueness: true

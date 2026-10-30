@@ -363,11 +363,4 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     get invoices_path
     assert_redirected_to new_session_path
   end
-
-  private
-
-  def attach_deliverables(invoice)
-    invoice.pdf.attach io: StringIO.new("%PDF-1.4"), filename: "test.pdf", content_type: "application/pdf"
-    invoice.ubl_xml.attach io: StringIO.new("<Invoice/>"), filename: "test.xml", content_type: "application/xml"
-  end
 end
