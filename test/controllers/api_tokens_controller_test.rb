@@ -13,6 +13,14 @@ class ApiTokensControllerTest < ActionDispatch::IntegrationTest
     assert flash[:token].present?, "Expected flash[:token] to contain the plain token"
   end
 
+  test "create shows the plain token in a dialog" do
+    post business_api_tokens_path, params: { api_token: { name: "New token" } }
+    plain_token = flash[:token]
+    follow_redirect!
+
+    assert_select "dialog code", text: plain_token
+  end
+
   test "destroy revokes a token" do
     token = api_tokens(:chrome_extension)
     assert_difference "ApiToken.count", -1 do
