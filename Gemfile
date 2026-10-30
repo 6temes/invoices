@@ -93,6 +93,8 @@ gem "csv", "~> 3.3"
 
 gem "rails-informant"
 
+gem "mcp"
+
 gem "rails_semantic_logger"
 gem "opentelemetry-sdk"
 gem "opentelemetry-exporter-otlp"
