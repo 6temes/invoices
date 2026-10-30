@@ -1,4 +1,6 @@
 class ListInvoicesTool < MCP::Tool
+  INVOICE_FIELDS = %w[ id invoice_number issue_date due_date billing_month status subtotal tax_rate tax_amount total paid_on paid_amount ]
+
   tool_name "list_invoices"
   description "List a year's issued invoices (never drafts), ordered by issue date. Filter by client or status."
   input_schema(
@@ -20,7 +22,7 @@ class ListInvoicesTool < MCP::Tool
   end
 
   def self.summary(invoice)
-    invoice.slice(*%w[ id invoice_number issue_date due_date billing_month status subtotal tax_rate tax_amount total paid_on paid_amount ])
+    invoice.slice(*INVOICE_FIELDS)
       .merge("client" => invoice.client.slice("id", "name"))
   end
 end

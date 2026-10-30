@@ -15,7 +15,7 @@ class GetInvoiceTool < MCP::Tool
   end
 
   def self.details(invoice)
-    invoice.slice(*%w[ id invoice_number issue_date due_date billing_month status subtotal tax_rate tax_amount total paid_on paid_amount ]).merge(
+    invoice.slice(*ListInvoicesTool::INVOICE_FIELDS).merge(
       "client" => invoice.client.slice("id", "name", "tax_registration_number"),
       "line_items" => invoice.line_items.map { it.slice("item_type", "description", "quantity", "unit_price", "amount", "origin") },
       "files" => {
