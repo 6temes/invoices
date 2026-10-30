@@ -71,7 +71,8 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   test "rejects listing drafts" do
     post mcp_path, params: call_tool("list_invoices", year: 2026, status: "draft"), headers: auth, as: :json
 
-    assert response.parsed_body["error"] || response.parsed_body.dig("result", "isError")
+    assert response.parsed_body.dig("result", "isError")
+    assert_no_match(/invoice_number/, response.parsed_body.dig("result", "content", 0, "text"))
   end
 
   test "lists invoices through the endpoint" do
