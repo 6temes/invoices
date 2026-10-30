@@ -17,9 +17,17 @@
   <% end %>
 
   <% if flash[:token] %>
-    <div class="flash flash-notice">
-      Token created. Copy it now, it won't be shown again: <code><%= flash[:token] %></code>
-    </div>
+    <dialog class="modal" aria-labelledby="new_token_title" data-controller="modal">
+      <h2 id="new_token_title">Token created</h2>
+      <p class="text-muted">Copy it now, it won't be shown again.</p>
+      <div class="copy-field" data-controller="clipboard">
+        <code data-clipboard-target="source"><%= flash[:token] %></code>
+        <button type="button" class="btn btn-sm" data-clipboard-target="button" data-action="clipboard#copy">Copy</button>
+      </div>
+      <form method="dialog" class="form-actions">
+        <button class="btn btn-primary">Done</button>
+      </form>
+    </dialog>
   <% end %>
 
   <% if Current.user.api_tokens.any? %>
