@@ -48,8 +48,8 @@ class ApiTokenTest < ActiveSupport::TestCase
   end
 
   test "purpose can be read invoices" do
-    token = users(:daniel).api_tokens.create!(name: "Agent", purpose: "read_invoices")
-    assert token.reload.read_invoices?
+    token = users(:daniel).api_tokens.create!(name: "Agent", purpose: "agent")
+    assert token.reload.agent?
   end
 
   test "each created token has a unique digest" do

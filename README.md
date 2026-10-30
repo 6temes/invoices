@@ -30,7 +30,7 @@ A single-tenant Rails app that runs the billing for one freelance consultancy in
 - **Email Delivery** — sends invoices as PDF attachments via Gmail SMTP
 - **Tax Export** — CSV and ZIP (all PDFs) export by calendar year
 - **Chrome Extension** — log hours directly from GitHub issues, matched to clients by repo
-- **MCP server** — read-only invoice access for AI agents, PDFs included
+- **MCP server** — invoice access for AI agents, PDFs included
 - **Bilingual** — invoices render in English or Japanese based on client locale
 
 ## Setup
@@ -75,13 +75,13 @@ A recurring job generates the monthly invoices from active retainers on the 1st 
 
 ## MCP server
 
-`POST /mcp` serves a read-only [MCP](https://modelcontextprotocol.io) server so any MCP client can read invoices, their PDFs and clients:
+`POST /mcp` serves an [MCP](https://modelcontextprotocol.io) server so any MCP client can read invoices, their PDFs and clients:
 
 - `list_invoices` — a year's issued invoices (never drafts), filterable by client and status
 - `get_invoice` — one invoice by number, with its line items and its PDF and UBL as files
 - `list_clients` — clients with their tax registration numbers
 
-Generate a token with the purpose **Read invoices** on Business Settings (Chrome extension tokens are refused), then point your MCP client at `/mcp` with the token as a bearer header. For example, with Claude Code:
+Generate a token with the purpose **Agent** on Business Settings (Chrome extension tokens are refused), then point your MCP client at `/mcp` with the token as a bearer header. For example, with Claude Code:
 
 ```bash
 claude mcp add --transport http --scope user invoices https://<your-host>/mcp \

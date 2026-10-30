@@ -24,7 +24,7 @@ class BusinessSystemTest < ApplicationSystemTestCase
   test "generated token opens in a dialog that copies it" do
     visit edit_business_path
     fill_in "Token name", with: "Laptop"
-    select "Read invoices", from: "Purpose"
+    select "Agent", from: "Purpose"
     click_on "Generate token"
 
     within "dialog[open]" do
@@ -34,6 +34,6 @@ class BusinessSystemTest < ApplicationSystemTestCase
       click_on "Done"
     end
     assert_no_selector "dialog[open]"
-    assert_selector "tr", text: /Laptop.*Read invoices/
+    assert_selector "tr", text: /Laptop.*Agent/
   end
 end
