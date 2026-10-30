@@ -6,21 +6,10 @@ module Api
       render json: { error: "Rate limit exceeded" }, status: :too_many_requests
     }
 
-    before_action :authenticate_token
+    include ApiTokenAuthentication
+    requires_api_token :chrome_extension
 
     private
-
-    def authenticate_token
-      token = request.headers["Authorization"]&.delete_prefix("Bearer ")
-      @api_token = ApiToken.find_by_token(token)
-
-      unless @api_token
-        render json: { error: "Unauthorized" }, status: :unauthorized
-        return
-      end
-
-      @api_token.touch_last_used
-    end
 
     def user_for_paper_trail
       @api_token&.user_id
