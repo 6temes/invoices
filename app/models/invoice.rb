@@ -39,6 +39,8 @@ class Invoice < ApplicationRecord
   after_save :persist_extra_hour_linkages, if: -> { @_pending_extra_hours.present? }
 
   scope :open, -> { where.not(status: :paid) }
+  scope :issued, -> { where.not(status: :draft) }
+  scope :for_year, ->(year) { where(issue_date: Date.new(year).all_year) }
 
   before_create :assign_next_number
 

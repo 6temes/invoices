@@ -58,10 +58,7 @@ class TaxExportsController < ApplicationController
   end
 
   def invoices_for_year
-    Invoice.includes(:client)
-      .where(issue_date: Date.new(@year, 1, 1)..Date.new(@year, 12, 31))
-      .where.not(status: :draft)
-      .order(:issue_date)
+    Invoice.issued.for_year(@year).includes(:client).order(:issue_date)
   end
 
   def available_years

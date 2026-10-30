@@ -60,7 +60,32 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert response.parsed_body["error"] || response.parsed_body.dig("result", "isError")
   end
 
+  test "lists read-only tools" do
+    post mcp_path, params: { jsonrpc: "2.0", id: 2, method: "tools/list" }, headers: auth, as: :json
+
+    tools = response.parsed_body.dig("result", "tools")
+    assert_equal %w[ list_clients list_invoices ], tools.pluck("name").sort
+    assert tools.all? { it.dig("annotations", "readOnlyHint") && !it.dig("annotations", "destructiveHint") }
+  end
+
+  test "rejects listing drafts" do
+    post mcp_path, params: call_tool("list_invoices", year: 2026, status: "draft"), headers: auth, as: :json
+
+    assert response.parsed_body["error"] || response.parsed_body.dig("result", "isError")
+  end
+
+  test "lists invoices through the endpoint" do
+    post mcp_path, params: call_tool("list_invoices", year: 2026), headers: auth, as: :json
+
+    text = response.parsed_body.dig("result", "content", 0, "text")
+    assert_equal [ 145, 146 ], JSON.parse(text)["invoices"].pluck("invoice_number")
+  end
+
   private
+
+  def call_tool(name, **arguments)
+    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name:, arguments: } }
+  end
 
   def auth(token = "test_token_read_invoices")
     MCP_HEADERS.merge("Authorization" => "Bearer #{token}")

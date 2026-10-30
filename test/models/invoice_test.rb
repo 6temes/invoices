@@ -502,4 +502,17 @@ class InvoiceTest < ActiveSupport::TestCase
   # Live updates are handled declaratively by `broadcasts_refreshes` (Turbo 8
   # page refreshes), which is framework-tested. The user-facing outcome — the
   # page reflecting a change — is covered in test/system/invoice_payments_test.rb.
+
+  test "issued excludes drafts and keeps every other status" do
+    invoices(:sakura_january).update_column :status, "failed"
+
+    assert_equal [ 145, 146 ], Invoice.issued.order(:invoice_number).pluck(:invoice_number)
+  end
+
+  test "for_year selects by issue date, not billing month" do
+    invoices(:acme_january).update_columns billing_month: Date.new(2025, 12), issue_date: Date.new(2026, 1, 5)
+
+    assert_includes Invoice.for_year(2026), invoices(:acme_january)
+    assert_not_includes Invoice.for_year(2025), invoices(:acme_january)
+  end
 end
