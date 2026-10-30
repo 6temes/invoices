@@ -1,6 +1,6 @@
 class ListClientsTool < MCP::Tool
   tool_name "list_clients"
-  description "List clients with the details freee needs to match or create a trading partner."
+  description "List clients with their tax registration numbers."
   annotations read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: false
 
   def self.call(server_context:)

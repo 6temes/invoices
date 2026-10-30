@@ -30,7 +30,7 @@ A single-tenant Rails app that runs the billing for one freelance consultancy in
 - **Email Delivery** — sends invoices as PDF attachments via Gmail SMTP
 - **Tax Export** — CSV and ZIP (all PDFs) export by calendar year
 - **Chrome Extension** — log hours directly from GitHub issues, matched to clients by repo
-- **MCP for Claude** — read-only invoice access for a Claude session doing the yearly bookkeeping in freee
+- **MCP for Claude** — read-only invoice access for a Claude session, PDFs included
 - **Bilingual** — invoices render in English or Japanese based on client locale
 
 ## Setup
@@ -75,7 +75,7 @@ A recurring job generates the monthly invoices from active retainers on the 1st 
 
 ## MCP for Claude
 
-`POST /mcp` serves a read-only [MCP](https://modelcontextprotocol.io) server so a Claude session can book a year's invoices into freee and draft the tax figures, alongside the freee MCP:
+`POST /mcp` serves a read-only [MCP](https://modelcontextprotocol.io) server so a Claude session can read invoices, their PDFs and clients:
 
 - `list_invoices` — a year's issued invoices (never drafts), filterable by client and status
 - `get_invoice` — one invoice by number, with its line items and its PDF and UBL as files
