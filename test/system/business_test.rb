@@ -20,4 +20,13 @@ class BusinessSystemTest < ApplicationSystemTestCase
     assert_text "API Tokens"
     assert_button "Generate token"
   end
+
+  test "generated token is shown in the API Tokens section" do
+    visit edit_business_path
+    within "#api_tokens" do
+      fill_in "Token name", with: "Laptop"
+      click_on "Generate token"
+      assert_text "Copy it now, it won't be shown again"
+    end
+  end
 end
