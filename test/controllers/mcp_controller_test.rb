@@ -64,7 +64,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     post mcp_path, params: { jsonrpc: "2.0", id: 2, method: "tools/list" }, headers: auth, as: :json
 
     tools = response.parsed_body.dig("result", "tools")
-    assert_equal %w[ list_clients list_invoices ], tools.pluck("name").sort
+    assert_equal %w[ get_invoice list_clients list_invoices ], tools.pluck("name").sort
     assert tools.all? { it.dig("annotations", "readOnlyHint") && !it.dig("annotations", "destructiveHint") }
   end
 
@@ -79,6 +79,19 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     text = response.parsed_body.dig("result", "content", 0, "text")
     assert_equal [ 145, 146 ], JSON.parse(text)["invoices"].pluck("invoice_number")
+  end
+
+  test "sends files in the MCP wire shape" do
+    invoice = invoices(:sakura_january)
+    invoice.pdf.attach io: StringIO.new("%PDF-1.4"), filename: "invoice_146.pdf", content_type: "application/pdf"
+    invoice.ubl_xml.attach io: StringIO.new("<Invoice/>"), filename: "invoice_146.xml", content_type: "application/xml"
+
+    post mcp_path, params: call_tool("get_invoice", invoice_number: 146), headers: auth, as: :json
+
+    assert_includes response.body, '"blob"'
+    assert_includes response.body, '"mimeType"'
+    assert_not_includes response.body, '"mime_type"'
+    assert_not_includes response.body, '"data"'
   end
 
   private

@@ -47,6 +47,6 @@ class McpController < ActionController::API
   end
 
   def tools
-    [ ListInvoicesTool, ListClientsTool ]
+    [ ListInvoicesTool, GetInvoiceTool, ListClientsTool ]
   end
 end
