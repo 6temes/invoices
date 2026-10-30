@@ -57,6 +57,12 @@ class ClientsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Acme Updated", clients(:acme).reload.name
   end
 
+  test "update records the signed-in user in the client's history" do
+    patch client_path(clients(:acme)), params: { client: { name: "Acme Updated" } }
+
+    assert_equal users(:daniel).id.to_s, clients(:acme).versions.last.whodunnit
+  end
+
   test "destroy removes client" do
     client = Client.create!(name: "Deletable", contact_name: "Del Person", email: "del@test.com", locale: :en, payment_method: :bank_transfer, payment_terms_days: 30, address_attributes: { country_code: "JP", postal_code: "100-0001", locality: "千代田区", administrative_area: "東京都" })
     assert_difference "Client.count", -1 do
