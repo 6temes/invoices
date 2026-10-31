@@ -33,6 +33,7 @@ en:
     bank_account_number: Account No.
     pay_with_credit_card: Pay with Credit Card
     payment_error: "The payment could not be processed. Please try again in a few minutes."
+    payment_pending: "A payment for this invoice is already in progress. I'll send a receipt by email once it arrives."
     retainer_subject: Web development and maintenance
     retainer_subject_with_infrastructure: Web development, maintenance, and server infrastructure
     retainer_line: "Monthly retainer for %{subject}, %{period} (includes %{hours} hours)"

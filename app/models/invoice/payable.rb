@@ -13,11 +13,14 @@ module Invoice::Payable
   FAILED_PAYMENT_INTENT_STATUSES = %w[ requires_payment_method canceled ]
 
   class_methods do
+    def reconcile_checkout_session(session)
+      apply_checkout_session session, payment_intent: unsettled_payment_intent(session)
+    end
+
     # A completed session reads the same while a delayed payment is pending and
     # after it failed; only its PaymentIntent tells them apart.
-    def reconcile_checkout_session(session)
-      payment_intent = Stripe::PaymentIntent.retrieve(session.payment_intent) if session.status == "complete" && session.payment_status == "unpaid"
-      apply_checkout_session session, payment_intent:
+    def unsettled_payment_intent(session)
+      Stripe::PaymentIntent.retrieve(session.payment_intent) if session.status == "complete" && session.payment_status == "unpaid"
     end
 
     def apply_checkout_session(session, payment_intent: nil)
@@ -37,6 +40,10 @@ module Invoice::Payable
 
       invoice.apply_checkout_session session, payment_intent:
     end
+  end
+
+  def reconcile_checkout_session(session)
+    apply_checkout_session session, payment_intent: self.class.unsettled_payment_intent(session)
   end
 
   def apply_checkout_session(session, payment_intent: nil)

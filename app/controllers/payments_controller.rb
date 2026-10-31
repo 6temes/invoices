@@ -16,8 +16,12 @@ class PaymentsController < ApplicationController
   def create
     return redirect_to public_payment_path(params[:token]) unless @invoice.sent?
 
-    session = find_or_create_checkout_session
-    redirect_to session.url, allow_other_host: true
+    if session = find_or_create_checkout_session
+      redirect_to session.url, allow_other_host: true
+    else
+      redirect_to public_payment_path(params[:token]),
+        alert: I18n.with_locale(@invoice.locale) { I18n.t("invoice.payment_pending") }
+    end
   rescue Invoice::InvalidStatusError
     redirect_to public_payment_path(params[:token])
   rescue Stripe::StripeError => e
@@ -44,8 +48,7 @@ class PaymentsController < ApplicationController
     if @invoice.stripe_checkout_session_id.present?
       existing = Stripe::Checkout::Session.retrieve @invoice.stripe_checkout_session_id
       return existing if existing.status == "open"
-
-      @invoice.apply_checkout_session existing if existing.status == "complete"
+      return if existing.status == "complete" && @invoice.reconcile_checkout_session(existing) == :pending
     end
 
     @invoice.create_checkout_session!

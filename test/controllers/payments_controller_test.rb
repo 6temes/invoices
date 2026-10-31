@@ -122,6 +122,42 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert @invoice.reload.paid?
   end
 
+  test "create does not start a second payment while a delayed one is pending" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_test_konbini"
+    Stripe::Checkout::Session.expects(:create).never
+    Stripe::PaymentIntent.stubs(:retrieve).with("pi_test_konbini")
+      .returns(Stripe::PaymentIntent.construct_from(id: "pi_test_konbini", status: "requires_action"))
+
+    stub_stripe_session_retrieve(unpaid_session("cs_test_konbini")) do
+      post public_payment_create_path(@token)
+    end
+
+    pending = I18n.t("invoice.payment_pending", locale: @invoice.locale)
+    assert_redirected_to public_payment_path(@token)
+    assert_equal pending, flash[:alert]
+    follow_redirect!
+    assert_select ".flash-alert", text: pending
+    assert_equal "cs_test_konbini", @invoice.reload.stripe_checkout_session_id
+  end
+
+  test "create starts a fresh payment after a delayed one failed" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_test_konbini"
+    Stripe::PaymentIntent.stubs(:retrieve).with("pi_test_konbini")
+      .returns(Stripe::PaymentIntent.construct_from(id: "pi_test_konbini", status: "requires_payment_method"))
+    new_session = OpenStruct.new(id: "cs_test_retry", url: "https://checkout.stripe.com/retry")
+
+    stub_stripe_customer_retrieve do
+      stub_stripe_session_retrieve(unpaid_session("cs_test_konbini")) do
+        stub_stripe_session_create(new_session) do
+          post public_payment_create_path(@token)
+        end
+      end
+    end
+
+    assert_redirected_to "https://checkout.stripe.com/retry"
+    assert_equal "cs_test_retry", @invoice.reload.stripe_checkout_session_id
+  end
+
   test "create creates session when no session ID exists" do
     @invoice.update_columns stripe_checkout_session_id: nil
 
@@ -165,6 +201,13 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def unpaid_session(id)
+    Stripe::Checkout::Session.construct_from(
+      id:, status: "complete", payment_status: "unpaid", currency: "jpy",
+      amount_total: @invoice.total, payment_intent: "pi_test_konbini"
+    )
+  end
 
   def stub_stripe_session_retrieve(session)
     original = Stripe::Checkout::Session.method(:retrieve)
