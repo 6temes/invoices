@@ -24,6 +24,18 @@ class Webhooks::StripeEventNotificationsControllerTest < ActionDispatch::Integra
     assert_response :bad_request
   end
 
+  test "a signed body that is not JSON is rejected" do
+    payload = "not json"
+    timestamp = Time.current
+    signature = Stripe::Webhook::Signature.compute_signature(timestamp, payload, Rails.configuration.x.stripe.thin_webhook_secret)
+
+    post webhooks_stripe_event_notifications_path, params: payload,
+      headers: { "Content-Type" => "application/json",
+                 "Stripe-Signature" => Stripe::Webhook::Signature.generate_header(timestamp, signature) }
+
+    assert_response :bad_request
+  end
+
   test "an event type the app does not handle is acknowledged and reported" do
     assert_error_reported(StripeEventNotificationGateway::UnhandledEventError) do
       assert_no_enqueued_jobs do

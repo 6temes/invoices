@@ -57,6 +57,17 @@ class CheckoutSessionReconciliationJobTest < ActiveJob::TestCase
     assert_equal "cs_missing", report.context[:session_id]
   end
 
+  test "a rejected API key is discarded and reported" do
+    Stripe::Checkout::Session.stubs(:retrieve).raises(Stripe::AuthenticationError.new("Invalid API Key"))
+
+    report = assert_error_reported(Stripe::AuthenticationError) do
+      assert_no_enqueued_jobs only: CheckoutSessionReconciliationJob do
+        CheckoutSessionReconciliationJob.perform_now "cs_unauthorized"
+      end
+    end
+    assert_equal "cs_unauthorized", report.context[:session_id]
+  end
+
   test "a paid session for a draft invoice fails the job" do
     draft = invoices(:acme_february_draft)
     Stripe::Checkout::Session.stubs(:retrieve).returns(session(id: "cs_draft", status: "complete", payment_status: "paid", invoice: draft))

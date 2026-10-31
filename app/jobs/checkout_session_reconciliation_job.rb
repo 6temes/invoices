@@ -2,7 +2,7 @@ class CheckoutSessionReconciliationJob < ApplicationJob
   queue_as :default
 
   # Stripe stopped retrying once the webhook returned 200, so this budget (about
-  # three hours) is the only retry a payment gets before it needs the owner.
+  # four hours) is the only retry a payment gets before it needs the owner.
   retry_on Stripe::APIConnectionError, Stripe::APIError, Stripe::RateLimitError,
     wait: :polynomially_longer, attempts: 10 do |job, error|
     job.send :report, error
