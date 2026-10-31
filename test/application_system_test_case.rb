@@ -3,6 +3,11 @@ require "test_helper"
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 900 ] do |driver_option|
     driver_option.add_argument("--disable-back-forward-cache")
+    # The login test submits the fixture password, which is in Chrome's breached
+    # password list. Leak detection then opens a browser dialog a few seconds
+    # later, and while it is up the tab ignores clicks, so whichever test runs
+    # next loses its clicks without any error.
+    driver_option.add_preference("profile.password_manager_leak_detection", false)
     driver_option.add_argument("--disable-dev-shm-usage") if ENV["CI"]
   end
 
