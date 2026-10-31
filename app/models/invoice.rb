@@ -193,7 +193,10 @@ class Invoice < ApplicationRecord
       metadata: { invoice_id: id }
     )
 
-    update! stripe_checkout_session_id: session.id
+    with_lock do
+      raise InvalidStatusError, "Cannot create checkout session for paid invoice" if paid?
+      update! stripe_checkout_session_id: session.id
+    end
     session
   end
 

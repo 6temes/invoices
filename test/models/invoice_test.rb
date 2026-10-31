@@ -542,6 +542,18 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal "cs_card_only", invoice.reload.stripe_checkout_session_id
   end
 
+  test "create_checkout_session! keeps the session that paid while the new one was being created" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    Stripe::Customer.stubs(:retrieve).returns(Stripe::Customer.construct_from(id: "cus_test_sakura123"))
+    Stripe::Checkout::Session.stubs(:create).with do
+      Invoice.where(id: invoice.id).update_all status: "paid", stripe_checkout_session_id: "cs_paid"
+    end.returns(Stripe::Checkout::Session.construct_from(id: "cs_late"))
+
+    assert_raises(Invoice::InvalidStatusError) { invoice.create_checkout_session! }
+    assert_equal "cs_paid", invoice.reload.stripe_checkout_session_id
+  end
+
   test "a paid checkout session marks the invoice paid and sends one receipt" do
     invoice = invoices(:sakura_january)
     attach_fake_deliverables invoice
@@ -640,6 +652,15 @@ class InvoiceTest < ActiveSupport::TestCase
       Invoice.apply_checkout_session expired_session(invoice, id: "cs_paid_earlier")
     end
     assert_equal "cs_paid_earlier", invoice.reload.stripe_checkout_session_id
+  end
+
+  test "an expired session leaves an invoice that is not sent alone" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns status: "preparing", stripe_checkout_session_id: "cs_current"
+
+    Invoice.apply_checkout_session expired_session(invoice, id: "cs_current")
+
+    assert_equal "cs_current", invoice.reload.stripe_checkout_session_id
   end
 
   test "an open session changes nothing" do

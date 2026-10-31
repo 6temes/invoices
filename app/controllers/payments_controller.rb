@@ -18,6 +18,8 @@ class PaymentsController < ApplicationController
 
     session = find_or_create_checkout_session
     redirect_to session.url, allow_other_host: true
+  rescue Invoice::InvalidStatusError
+    redirect_to public_payment_path(params[:token])
   rescue Stripe::StripeError => e
     Rails.error.report e, context: { invoice_id: @invoice.id }
     redirect_to public_payment_path(params[:token]),
@@ -42,6 +44,8 @@ class PaymentsController < ApplicationController
     if @invoice.stripe_checkout_session_id.present?
       existing = Stripe::Checkout::Session.retrieve @invoice.stripe_checkout_session_id
       return existing if existing.status == "open"
+
+      @invoice.apply_checkout_session existing if existing.status == "complete"
     end
 
     @invoice.create_checkout_session!
