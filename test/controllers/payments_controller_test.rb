@@ -106,6 +106,22 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "cs_test_new_456", @invoice.reload.stripe_checkout_session_id
   end
 
+  test "create records a stored session that was already paid instead of starting another" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_test_paid"
+    paid_session = Stripe::Checkout::Session.construct_from(
+      id: "cs_test_paid", status: "complete", payment_status: "paid", currency: "jpy",
+      amount_total: @invoice.total, payment_intent: "pi_test_paid"
+    )
+    Stripe::Checkout::Session.expects(:create).never
+
+    stub_stripe_session_retrieve(paid_session) do
+      post public_payment_create_path(@token)
+    end
+
+    assert_redirected_to public_payment_path(@token)
+    assert @invoice.reload.paid?
+  end
+
   test "create creates session when no session ID exists" do
     @invoice.update_columns stripe_checkout_session_id: nil
 

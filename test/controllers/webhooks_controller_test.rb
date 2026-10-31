@@ -72,6 +72,25 @@ class WebhooksControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "completed session without payment leaves the invoice sent" do
+    event = build_stripe_event(
+      type: "checkout.session.completed",
+      invoice_id: @invoice.id,
+      currency: "jpy",
+      amount_total: @invoice.total,
+      session_id: "cs_unpaid",
+      payment_intent: nil,
+      payment_status: "unpaid"
+    )
+
+    stub_stripe_construct_event(event) do
+      post webhooks_stripe_path, params: "{}", headers: stripe_headers
+    end
+
+    assert_response :ok
+    assert @invoice.reload.sent?
+  end
+
   test "invalid signature returns bad_request" do
     stub_stripe_construct_event_error do
       post webhooks_stripe_path, params: "{}", headers: stripe_headers
@@ -203,9 +222,12 @@ class WebhooksControllerTest < ActionDispatch::IntegrationTest
     { "HTTP_STRIPE_SIGNATURE" => "t=123,v1=abc" }
   end
 
-  def build_stripe_event(type:, invoice_id:, currency: nil, amount_total: nil, session_id: nil, payment_intent: nil)
+  def build_stripe_event(type:, invoice_id:, currency: nil, amount_total: nil, session_id: nil, payment_intent: nil,
+                         payment_status: type == "checkout.session.completed" ? "paid" : "unpaid")
     session = OpenStruct.new(
       metadata: { "invoice_id" => invoice_id.to_s },
+      status: type == "checkout.session.completed" ? "complete" : "expired",
+      payment_status:,
       currency:,
       amount_total:,
       id: session_id,

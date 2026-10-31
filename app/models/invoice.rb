@@ -1,4 +1,7 @@
 class Invoice < ApplicationRecord
+  include Deliverable
+  include Payable
+
   class InvalidStatusError < StandardError; end
 
   # Stated on the expired-link page, so it has to live somewhere both it and the
@@ -31,8 +34,6 @@ class Invoice < ApplicationRecord
   validate :at_least_one_line_item
   validate :paid_on_in_valid_range, if: :paid?
 
-  validate :pdf_presence_matches_status
-  validate :ubl_xml_presence_matches_status
   validate :immutable_when_frozen, on: :update
 
   before_validation :recalculate_totals, if: :draft?
@@ -66,90 +67,12 @@ class Invoice < ApplicationRecord
     self.total = subtotal + tax_amount
   end
 
-  def mark_as_paid!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
-    update!(status: :paid, paid_on:, paid_amount: total,
-            stripe_checkout_session_id:, stripe_payment_intent_id:)
-
-    # Enqueue after the update! commits (Rails 8.1 enqueue_after_transaction_commit
-    # defaults to false, and no caller wraps this in an outer transaction). This is
-    # the single choke point for both the Stripe-webhook and manual-mark paths.
-    InvoiceMailer.send_receipt(self).deliver_later
-  end
-
   def can_send_reminder?
     sent?
   end
 
   def record_reminder!
     update! reminded_at: Time.current, reminders_count: reminders_count + 1
-  end
-
-  def prepare_for_delivery!
-    raise InvalidStatusError, "Invoice must be in draft status to prepare for delivery" unless draft?
-
-    update! status: :preparing
-  end
-
-  def mark_as_failed!
-    raise InvalidStatusError, "Invoice must be in preparing status to mark as failed" unless preparing?
-
-    update! status: :failed
-  end
-
-  def retry_delivery!
-    raise InvalidStatusError, "Invoice must be in failed status to retry delivery" unless failed?
-
-    update! status: :preparing, stripe_checkout_session_id: nil
-  end
-
-  def revert_to_draft!
-    raise InvalidStatusError, "Invoice must be in failed status to revert to draft" unless failed?
-
-    update! status: :draft, stripe_checkout_session_id: nil
-  end
-
-  def deliver!
-    raise InvalidStatusError, "Invoice must be in preparing status to deliver" unless preparing?
-
-    create_checkout_session! if client.credit_card? && stripe_checkout_session_id.blank?
-
-    html = render_standalone_html
-    pdf_binary = CloudflarePdfGateway.render html
-    xml_string = UblInvoiceBuilder.new(self).to_xml
-
-    transaction do
-      pdf.attach io: StringIO.new(pdf_binary), filename: pdf_filename, content_type: "application/pdf"
-      ubl_xml.attach io: StringIO.new(xml_string), filename: ubl_filename, content_type: "application/xml"
-      update! status: :sent, sent_at: Time.current
-    end
-
-    InvoiceMailer.send_invoice(self).deliver_later
-  end
-
-  def create_checkout_session!
-    raise InvalidStatusError, "Cannot create checkout session for paid invoice" if paid?
-
-    token = signed_id purpose: :payment, expires_in: 60.days
-    host = default_host
-
-    session = Stripe::Checkout::Session.create(
-      customer: client.stripe_customer.id,
-      line_items: [ {
-        price_data: {
-          currency: "jpy",
-          product_data: { name: "Invoice ##{invoice_number} — #{subject}" },
-          unit_amount: total
-        },
-        quantity: 1
-      } ],
-      mode: "payment",
-      success_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
-      cancel_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
-      metadata: { invoice_id: id }
-    )
-
-    update! stripe_checkout_session_id: session.id
-    session
   end
 
   def subject
@@ -261,22 +184,6 @@ class Invoice < ApplicationRecord
     @_pending_extra_hours = nil
   end
 
-  def pdf_presence_matches_status
-    if draft? && pdf.attached?
-      errors.add :pdf, "must not be attached for draft invoices"
-    elsif (sent? || paid?) && !pdf.attached?
-      errors.add :pdf, "must be attached for sent or paid invoices"
-    end
-  end
-
-  def ubl_xml_presence_matches_status
-    if draft? && ubl_xml.attached?
-      errors.add :ubl_xml, "must not be attached for draft invoices"
-    elsif (sent? || paid?) && !ubl_xml.attached?
-      errors.add :ubl_xml, "must be attached for sent or paid invoices"
-    end
-  end
-
   def immutable_when_frozen
     return if draft?
 
@@ -286,25 +193,7 @@ class Invoice < ApplicationRecord
     errors.add :base, "cannot modify a #{status} invoice (only payment fields are allowed)"
   end
 
-  def render_standalone_html
-    ApplicationController.renderer.new(
-      "HTTP_HOST" => default_host
-    ).render(
-      partial: "invoices/pdf_template",
-      locals: { invoice: self, business: Business.instance },
-      formats: [ :html ]
-    )
-  end
-
   def default_host
     ENV.fetch("APP_HOST", "localhost:3000")
-  end
-
-  def pdf_filename
-    "invoice_#{invoice_number}.pdf"
-  end
-
-  def ubl_filename
-    "invoice_#{invoice_number}.xml"
   end
 end

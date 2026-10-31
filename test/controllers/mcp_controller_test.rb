@@ -9,11 +9,19 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   test "refuses a request without a token" do
     post mcp_path, params: initialize_request, headers: MCP_HEADERS, as: :json
     assert_response :unauthorized
+    assert_equal "Bearer", response.headers["WWW-Authenticate"]
+  end
+
+  test "refuses an unknown token as invalid" do
+    post mcp_path, params: initialize_request, headers: auth("wrong_token"), as: :json
+    assert_response :unauthorized
+    assert_equal 'Bearer error="invalid_token"', response.headers["WWW-Authenticate"]
   end
 
   test "refuses a Chrome extension token" do
     post mcp_path, params: initialize_request, headers: auth("test_token_abc123"), as: :json
     assert_response :forbidden
+    assert_nil response.headers["WWW-Authenticate"]
   end
 
   test "initializes with a read invoices token" do
