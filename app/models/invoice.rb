@@ -13,6 +13,8 @@ class Invoice < ApplicationRecord
   # mailer can read.
   PAYMENT_LINK_VALIDITY = 60.days
 
+  CURRENCY = "jpy"
+
   has_paper_trail skip: %i[created_at updated_at]
 
   broadcasts_refreshes
@@ -92,8 +94,6 @@ class Invoice < ApplicationRecord
     invoice.apply_checkout_session session
   end
 
-  # Webhooks arrive in any order and more than once, so the outcome depends only on
-  # the session's current state and the invoice's, read under the row lock.
   def apply_checkout_session(session)
     paid_now = with_lock do
       if paid?
@@ -115,8 +115,8 @@ class Invoice < ApplicationRecord
     send_receipt if paid_now
   end
 
-  def mark_as_paid!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
-    with_lock { record_payment!(paid_on:, stripe_checkout_session_id:, stripe_payment_intent_id:) }
+  def mark_as_paid!(**)
+    with_lock { record_payment!(**) }
     send_receipt
   end
 
@@ -180,7 +180,7 @@ class Invoice < ApplicationRecord
       customer: client.stripe_customer.id,
       line_items: [ {
         price_data: {
-          currency: "jpy",
+          currency: CURRENCY,
           product_data: { name: "Invoice ##{invoice_number} — #{subject}" },
           unit_amount: total
         },
@@ -218,7 +218,7 @@ class Invoice < ApplicationRecord
     error =
       if session.payment_status != "paid"
         UnpaidCheckoutError.new("Checkout session completed without payment")
-      elsif session.currency != "jpy"
+      elsif session.currency != CURRENCY
         CurrencyMismatchError.new("Checkout session currency mismatch")
       elsif session.amount_total != total
         AmountMismatchError.new("Checkout session amount mismatch")
