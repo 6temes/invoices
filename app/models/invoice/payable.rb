@@ -10,7 +10,7 @@ module Invoice::Payable
   UnrecordedPaymentError = Class.new(CheckoutError)
 
   CURRENCY = "jpy"
-  FAILED_PAYMENT_INTENT_STATUSES = %w[ requires_payment_method canceled ]
+  FAILED_PAYMENT_INTENT_STATUSES = %w[ requires_payment_method canceled ].freeze
 
   class_methods do
     def reconcile_checkout_session(session)

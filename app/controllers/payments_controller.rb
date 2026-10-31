@@ -16,7 +16,8 @@ class PaymentsController < ApplicationController
   def create
     return redirect_to public_payment_path(params[:token]) unless @invoice.sent?
 
-    if session = find_or_create_checkout_session
+    session = find_or_create_checkout_session
+    if session
       redirect_to session.url, allow_other_host: true
     else
       redirect_to public_payment_path(params[:token]),

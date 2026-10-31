@@ -189,6 +189,20 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".flash-alert", text: /#{I18n.t("invoice.payment_error", locale: @invoice.locale)}/
   end
 
+  test "create shows friendly error when the delayed payment cannot be checked" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_test_konbini"
+    Stripe::Checkout::Session.expects(:create).never
+    Stripe::PaymentIntent.stubs(:retrieve).raises(Stripe::APIConnectionError.new("Connection failed"))
+
+    stub_stripe_session_retrieve(unpaid_session("cs_test_konbini")) do
+      post public_payment_create_path(@token)
+    end
+
+    assert_redirected_to public_payment_path(@token)
+    assert_equal I18n.t("invoice.payment_error", locale: @invoice.locale), flash[:alert]
+    assert_equal "cs_test_konbini", @invoice.reload.stripe_checkout_session_id
+  end
+
   test "create redirects non-sent invoices without calling Stripe" do
     invoice = invoices(:acme_january)
     invoice.pdf.attach io: StringIO.new("%PDF-1.4"), filename: "test.pdf", content_type: "application/pdf"
