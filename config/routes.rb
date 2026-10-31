@@ -47,8 +47,11 @@ Rails.application.routes.draw do
   get "pay/:token", to: "payments#show", as: :public_payment
   post "pay/:token", to: "payments#create", as: :public_payment_create
 
-  # Stripe webhook (unauthenticated, signature-verified)
+  # Stripe webhooks (unauthenticated, signature-verified)
   post "webhooks/stripe", to: "webhooks#stripe"
+  namespace :webhooks do
+    resources :stripe_event_notifications, only: :create
+  end
 
   # Tax export
   resource :tax_export, only: [ :show ] do
