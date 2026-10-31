@@ -613,6 +613,25 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal "cs_konbini", invoice.stripe_checkout_session_id
   end
 
+  test "a pending delayed payment becomes the stored session" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_other_tab"
+
+    Invoice.apply_checkout_session unpaid_session(invoice, id: "cs_konbini"), payment_intent: payment_intent(status: "requires_action")
+
+    assert_equal "cs_konbini", invoice.reload.stripe_checkout_session_id
+  end
+
+  test "a pending delayed payment leaves an invoice that is not sent alone" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns status: "preparing", stripe_checkout_session_id: "cs_other_tab"
+
+    Invoice.apply_checkout_session unpaid_session(invoice, id: "cs_konbini"), payment_intent: payment_intent(status: "requires_action")
+
+    assert_equal "cs_other_tab", invoice.reload.stripe_checkout_session_id
+  end
+
   test "a completed unpaid session without its payment intent is treated as pending" do
     invoice = invoices(:sakura_january)
     invoice.update_columns stripe_checkout_session_id: "cs_konbini"

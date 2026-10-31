@@ -46,6 +46,13 @@ module Invoice::Payable
     apply_checkout_session session, payment_intent: self.class.unsettled_payment_intent(session)
   end
 
+  def checkout_pending?
+    return false if stripe_checkout_session_id.blank?
+
+    session = Stripe::Checkout::Session.retrieve stripe_checkout_session_id
+    session.status == "complete" && reconcile_checkout_session(session) == :pending
+  end
+
   def apply_checkout_session(session, payment_intent: nil)
     outcome = with_lock do
       if paid?
@@ -113,6 +120,7 @@ module Invoice::Payable
         forget_checkout_session session
         :failed
       else
+        adopt_checkout_session session
         :pending
       end
     else
@@ -135,6 +143,12 @@ module Invoice::Payable
     Rails.error.report error, context: { invoice_id: id, session_id: session.id, payment_status: session.payment_status,
       currency: session.currency, expected: total, actual: session.amount_total }, handled: true
     :unchanged
+  end
+
+  # Two tabs can each start a session; the one with a payment under way must be
+  # the stored one, or the next Pay click would start a second payment.
+  def adopt_checkout_session(session)
+    update! stripe_checkout_session_id: session.id if sent? && session.id != stripe_checkout_session_id
   end
 
   def forget_checkout_session(session)
