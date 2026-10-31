@@ -48,7 +48,7 @@ ja:
     footer:
       automated: 本メールは自動送信されています。
     shared:
-      pay_note: カード決済はStripeが処理します。
+      pay_note: お支払いはStripeが処理します。
     send_invoice:
       subject: "請求書 #%{number}：%{invoice_subject}"
       preheader: "%{period}分のご請求書 #%{number}（お支払い期限：%{due_date}）"

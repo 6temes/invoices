@@ -48,7 +48,7 @@ en:
     footer:
       automated: "This message was sent automatically."
     shared:
-      pay_note: "Card payments are processed by Stripe."
+      pay_note: "Payments are processed by Stripe."
     send_invoice:
       subject: "Invoice #%{number}: %{invoice_subject}"
       preheader: "Invoice #%{number} for %{period}, due %{due_date}."
