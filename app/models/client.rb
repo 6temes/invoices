@@ -13,7 +13,7 @@ class Client < ApplicationRecord
   validates_associated :address
 
   enum :locale, %w[ en ja ].index_by(&:itself)
-  enum :payment_method, %w[ bank_transfer credit_card ].index_by(&:itself)
+  enum :payment_method, %w[ bank_transfer stripe ].index_by(&:itself)
 
   serialize :github_repos, coder: JSON, default: []
 

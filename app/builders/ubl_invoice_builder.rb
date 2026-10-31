@@ -18,7 +18,7 @@ class UblInvoiceBuilder
 
   PAYMENT_MEANS_CODES = {
     "bank_transfer" => "42",
-    "credit_card" => "48"
+    "stripe" => "1"
   }.freeze
 
   def initialize(invoice)

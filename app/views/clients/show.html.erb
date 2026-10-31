@@ -35,7 +35,7 @@
           <div class="detail-value text-mono"><%= @client.tax_registration_number %></div>
         </div>
       <% end %>
-      <% if @client.credit_card? && @client.stripe_customer_id.present? %>
+      <% if @client.stripe? && @client.stripe_customer_id.present? %>
         <div class="detail-section">
           <div class="detail-label">Stripe customer</div>
           <div class="detail-value text-mono"><%= link_to @client.stripe_customer_id, "https://dashboard.stripe.com/customers/#{@client.stripe_customer_id}", target: "_blank" %></div>

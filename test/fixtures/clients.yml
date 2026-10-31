@@ -14,7 +14,7 @@ sakura:
   contact_name: 田中太郎
   email: keiri@sakura.example.jp
   locale: ja
-  payment_method: credit_card
+  payment_method: stripe
   payment_terms_days: 15
   stripe_customer_id: cus_test_sakura123
   github_repos: '["sakura-tech/portal"]'
