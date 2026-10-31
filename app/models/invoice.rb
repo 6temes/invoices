@@ -1,4 +1,6 @@
 class Invoice < ApplicationRecord
+  include Payable
+
   class InvalidStatusError < StandardError; end
 
   # Stated on the expired-link page, so it has to live somewhere both it and the
@@ -66,16 +68,6 @@ class Invoice < ApplicationRecord
     self.total = subtotal + tax_amount
   end
 
-  def mark_as_paid!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
-    update!(status: :paid, paid_on:, paid_amount: total,
-            stripe_checkout_session_id:, stripe_payment_intent_id:)
-
-    # Enqueue after the update! commits (Rails 8.1 enqueue_after_transaction_commit
-    # defaults to false, and no caller wraps this in an outer transaction). This is
-    # the single choke point for both the Stripe-webhook and manual-mark paths.
-    InvoiceMailer.send_receipt(self).deliver_later
-  end
-
   def can_send_reminder?
     sent?
   end
@@ -124,32 +116,6 @@ class Invoice < ApplicationRecord
     end
 
     InvoiceMailer.send_invoice(self).deliver_later
-  end
-
-  def create_checkout_session!
-    raise InvalidStatusError, "Cannot create checkout session for paid invoice" if paid?
-
-    token = signed_id purpose: :payment, expires_in: 60.days
-    host = default_host
-
-    session = Stripe::Checkout::Session.create(
-      customer: client.stripe_customer.id,
-      line_items: [ {
-        price_data: {
-          currency: "jpy",
-          product_data: { name: "Invoice ##{invoice_number} — #{subject}" },
-          unit_amount: total
-        },
-        quantity: 1
-      } ],
-      mode: "payment",
-      success_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
-      cancel_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
-      metadata: { invoice_id: id }
-    )
-
-    update! stripe_checkout_session_id: session.id
-    session
   end
 
   def subject
