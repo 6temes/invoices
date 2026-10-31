@@ -22,6 +22,19 @@ class InvoiceDeliveryJobTest < ActiveSupport::TestCase
     assert invoice.reload.failed?
   end
 
+  test "permanent failure is recorded in error monitoring with the job class" do
+    invoice = invoices(:acme_february_draft)
+    invoice.prepare_for_delivery!
+
+    CloudflarePdfGateway.stubs(:render).raises(CloudflarePdfGateway::ClientError.new("bad request"))
+
+    with_error_capture do
+      assert_difference -> { RailsInformant::ErrorGroup.where(job_class: "InvoiceDeliveryJob").count } do
+        InvoiceDeliveryJob.perform_now invoice
+      end
+    end
+  end
+
   test "rate limit error is retried, not discarded" do
     invoice = invoices(:acme_february_draft)
     invoice.prepare_for_delivery!
@@ -87,4 +100,16 @@ class InvoiceDeliveryJobTest < ActiveSupport::TestCase
     job = InvoiceDeliveryJob.new(invoice)
     job.send :mark_invoice_failed, invoice, error
   end
+
+  private
+    # Capture is off in test, so the engine never subscribes to Rails.error at boot.
+    def with_error_capture
+      RailsInformant.configure { it.capture_errors = true }
+      subscriber = RailsInformant::ErrorSubscriber.new
+      Rails.error.subscribe subscriber
+      yield
+    ensure
+      Rails.error.unsubscribe subscriber
+      RailsInformant.configure { it.capture_errors = false }
+    end
 end
