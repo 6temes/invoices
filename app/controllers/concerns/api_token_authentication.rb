@@ -19,11 +19,16 @@ module ApiTokenAuthentication
     @api_token = ApiToken.find_by_token(token)
 
     if @api_token.nil?
+      response.headers["WWW-Authenticate"] = bearer_challenge(token)
       render json: { error: "Unauthorized" }, status: :unauthorized
     elsif @api_token.purpose != api_token_purpose
       render json: { error: "Forbidden" }, status: :forbidden
     else
       @api_token.touch_last_used
     end
+  end
+
+  def bearer_challenge(token)
+    token.present? ? 'Bearer error="invalid_token"' : "Bearer"
   end
 end

@@ -15,11 +15,13 @@ class Api::ClientsControllerTest < ActionDispatch::IntegrationTest
   test "returns unauthorized without token" do
     get api_clients_path
     assert_response :unauthorized
+    assert_equal "Bearer", response.headers["WWW-Authenticate"]
   end
 
   test "returns unauthorized with invalid token" do
     get api_clients_path, headers: { "Authorization" => "Bearer wrong_token" }
     assert_response :unauthorized
+    assert_equal 'Bearer error="invalid_token"', response.headers["WWW-Authenticate"]
   end
 
   test "refuses a read invoices token" do
@@ -29,6 +31,7 @@ class Api::ClientsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :forbidden
     assert_equal({ "error" => "Forbidden" }, JSON.parse(response.body))
+    assert_nil response.headers["WWW-Authenticate"]
     assert_nil token.reload.last_used_at
   end
 end
