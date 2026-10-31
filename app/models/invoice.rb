@@ -34,8 +34,6 @@ class Invoice < ApplicationRecord
   validate :at_least_one_line_item
   validate :paid_on_in_valid_range, if: :paid?
 
-  validate :pdf_presence_matches_status
-  validate :ubl_xml_presence_matches_status
   validate :immutable_when_frozen, on: :update
 
   before_validation :recalculate_totals, if: :draft?
@@ -184,22 +182,6 @@ class Invoice < ApplicationRecord
       ExtraHour.where(id: pairs.map(&:first).map(&:id)).update_all(invoice_line_item_id: line_item.id)
     end
     @_pending_extra_hours = nil
-  end
-
-  def pdf_presence_matches_status
-    if draft? && pdf.attached?
-      errors.add :pdf, "must not be attached for draft invoices"
-    elsif (sent? || paid?) && !pdf.attached?
-      errors.add :pdf, "must be attached for sent or paid invoices"
-    end
-  end
-
-  def ubl_xml_presence_matches_status
-    if draft? && ubl_xml.attached?
-      errors.add :ubl_xml, "must not be attached for draft invoices"
-    elsif (sent? || paid?) && !ubl_xml.attached?
-      errors.add :ubl_xml, "must be attached for sent or paid invoices"
-    end
   end
 
   def immutable_when_frozen

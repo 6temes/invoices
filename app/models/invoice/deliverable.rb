@@ -1,6 +1,11 @@
 module Invoice::Deliverable
   extend ActiveSupport::Concern
 
+  included do
+    validate :pdf_presence_matches_status
+    validate :ubl_xml_presence_matches_status
+  end
+
   def prepare_for_delivery!
     raise Invoice::InvalidStatusError, "Invoice must be in draft status to prepare for delivery" unless draft?
 
@@ -44,6 +49,22 @@ module Invoice::Deliverable
   end
 
   private
+
+  def pdf_presence_matches_status
+    if draft? && pdf.attached?
+      errors.add :pdf, "must not be attached for draft invoices"
+    elsif (sent? || paid?) && !pdf.attached?
+      errors.add :pdf, "must be attached for sent or paid invoices"
+    end
+  end
+
+  def ubl_xml_presence_matches_status
+    if draft? && ubl_xml.attached?
+      errors.add :ubl_xml, "must not be attached for draft invoices"
+    elsif (sent? || paid?) && !ubl_xml.attached?
+      errors.add :ubl_xml, "must be attached for sent or paid invoices"
+    end
+  end
 
   def render_standalone_html
     ApplicationController.renderer.new(
