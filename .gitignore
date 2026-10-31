@@ -34,6 +34,7 @@
 
 # Ignore key files for decrypting credentials and more.
 /config/*.key
+/config/credentials/*.key
 
 # UBL validation artifacts (downloaded by bin/fetch-ubl-assets)
 /vendor/validators/
