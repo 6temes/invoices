@@ -10,6 +10,7 @@ class PaymentsController < ApplicationController
   before_action :set_invoice
 
   def show
+    @checkout_pending = checkout_pending?
     render :thank_you if @invoice.paid?
   end
 
@@ -20,8 +21,7 @@ class PaymentsController < ApplicationController
     if session
       redirect_to session.url, allow_other_host: true
     else
-      redirect_to public_payment_path(params[:token]),
-        alert: I18n.with_locale(@invoice.locale) { I18n.t("invoice.payment_pending") }
+      redirect_to public_payment_path(params[:token])
     end
   rescue Invoice::InvalidStatusError
     redirect_to public_payment_path(params[:token])
@@ -41,6 +41,13 @@ class PaymentsController < ApplicationController
     @invoice = Invoice.find_signed!(params[:token], purpose: :payment)
   rescue ActiveSupport::MessageVerifier::InvalidSignature
     render :invalid_link, status: :not_found
+  end
+
+  def checkout_pending?
+    @invoice.sent? && @invoice.client.credit_card? && @invoice.checkout_pending?
+  rescue Stripe::StripeError => e
+    Rails.error.report e, context: { invoice_id: @invoice.id }
+    false
   end
 
   def find_or_create_checkout_session

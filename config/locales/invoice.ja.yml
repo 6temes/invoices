@@ -31,7 +31,7 @@ ja:
     bank_account_holder: 口座名義
     bank_account_type: 口座種別
     bank_account_number: 口座番号
-    pay_with_credit_card: クレジットカードで支払う
+    pay: お支払いに進む
     payment_error: "お支払い処理中にエラーが発生しました。数分後にもう一度お試しください。"
     payment_pending: "この請求書のお支払いは現在お手続き中です。ご入金を確認いたしましたら、領収のご連絡をメールでお送りいたします。"
     retainer_subject: ウェブ開発・保守

@@ -31,7 +31,7 @@ en:
     bank_account_holder: Account Holder
     bank_account_type: Account Type
     bank_account_number: Account No.
-    pay_with_credit_card: Pay with Credit Card
+    pay: Pay now
     payment_error: "The payment could not be processed. Please try again in a few minutes."
     payment_pending: "A payment for this invoice is already in progress. I'll send a receipt by email once it arrives."
     retainer_subject: Web development and maintenance
