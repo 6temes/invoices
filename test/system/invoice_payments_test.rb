@@ -18,7 +18,7 @@ class InvoicePaymentsSystemTest < ApplicationSystemTestCase
     visit payment_invoice_path(invoice)
     assert_field "Paid on"
 
-    submit_with "Confirm payment"
+    click_button "Confirm payment"
 
     assert_text "PAID"
     assert_text Date.current.to_s
@@ -40,25 +40,9 @@ class InvoicePaymentsSystemTest < ApplicationSystemTestCase
       "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))",
       date_input, "2026-03-10"
     )
-    submit_with "Save"
+    click_button "Save"
 
     assert_text "2026-03-10"
     assert_no_text "2026-02-15"
-  end
-
-  private
-
-  # On CI the first click on the submit button is occasionally swallowed: the server log
-  # shows no request at all and the button keeps its label, so the test times out on the
-  # old page. Turbo relabels the button ("Saving...") the moment a submit starts, so a
-  # label that is still there two seconds later means nothing was sent and the click is
-  # safe to repeat.
-  def submit_with(label)
-    submit = "#slideover_frame input[type=submit][value='#{label}']"
-    3.times do
-      find(submit, wait: 0).click
-      return if page.has_no_css?(submit, wait: 2)
-    end
-    flunk "clicking #{label.inspect} never started a submit"
   end
 end
