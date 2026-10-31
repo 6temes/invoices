@@ -10,9 +10,17 @@ module Invoice::Payable
   UnrecordedPaymentError = Class.new(CheckoutError)
 
   CURRENCY = "jpy"
+  FAILED_PAYMENT_INTENT_STATUSES = %w[ requires_payment_method canceled ]
 
   class_methods do
-    def apply_checkout_session(session)
+    # A completed session reads the same while a delayed payment is pending and
+    # after it failed; only its PaymentIntent tells them apart.
+    def reconcile_checkout_session(session)
+      payment_intent = Stripe::PaymentIntent.retrieve(session.payment_intent) if session.status == "complete" && session.payment_status == "unpaid"
+      apply_checkout_session session, payment_intent:
+    end
+
+    def apply_checkout_session(session, payment_intent: nil)
       invoice_id = session.metadata["invoice_id"]
       unless invoice_id
         Rails.error.report MissingMetadataError.new("Checkout session has no invoice_id in metadata"),
@@ -27,29 +35,30 @@ module Invoice::Payable
         return
       end
 
-      invoice.apply_checkout_session session
+      invoice.apply_checkout_session session, payment_intent:
     end
   end
 
-  def apply_checkout_session(session)
-    paid_now = with_lock do
+  def apply_checkout_session(session, payment_intent: nil)
+    outcome = with_lock do
       if paid?
         report_unrecorded_payment session if session.payment_status == "paid" && session.id != stripe_checkout_session_id
-        next false
+        next :unchanged
       end
 
       case session.status
       when "expired"
-        update! stripe_checkout_session_id: nil if sent? && session.id == stripe_checkout_session_id
-        false
+        forget_checkout_session session
+        :expired
       when "complete"
-        record_checkout_payment session
+        apply_completed_checkout session, payment_intent
       else
-        false
+        :unchanged
       end
     end
 
-    send_receipt if paid_now
+    send_receipt if outcome == :paid
+    outcome
   end
 
   def mark_as_paid!(**)
@@ -74,7 +83,6 @@ module Invoice::Payable
         quantity: 1
       } ],
       mode: "payment",
-      payment_method_types: [ "card" ],
       success_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
       cancel_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
       metadata: { invoice_id: id }
@@ -89,26 +97,41 @@ module Invoice::Payable
 
   private
 
-  def record_checkout_payment(session)
-    context = { invoice_id: id, session_id: session.id }
-
-    error =
-      if session.payment_status != "paid"
-        UnpaidCheckoutError.new("Checkout session completed without payment")
-      elsif session.currency != CURRENCY
-        CurrencyMismatchError.new("Checkout session currency mismatch")
-      elsif session.amount_total != total
-        AmountMismatchError.new("Checkout session amount mismatch")
+  def apply_completed_checkout(session, payment_intent)
+    case session.payment_status
+    when "paid"
+      record_checkout_payment session
+    when "unpaid"
+      if payment_intent&.status.in? FAILED_PAYMENT_INTENT_STATUSES
+        forget_checkout_session session
+        :failed
+      else
+        :pending
       end
-
-    if error
-      Rails.error.report error, context: context.merge(payment_status: session.payment_status,
-        currency: session.currency, expected: total, actual: session.amount_total), handled: true
-      return false
+    else
+      report_checkout_error session, UnpaidCheckoutError.new("Checkout session completed without payment")
     end
+  end
 
-    record_payment! stripe_checkout_session_id: session.id, stripe_payment_intent_id: session.payment_intent
-    true
+  def record_checkout_payment(session)
+    if session.currency != CURRENCY
+      report_checkout_error session, CurrencyMismatchError.new("Checkout session currency mismatch")
+    elsif session.amount_total != total
+      report_checkout_error session, AmountMismatchError.new("Checkout session amount mismatch")
+    else
+      record_payment! stripe_checkout_session_id: session.id, stripe_payment_intent_id: session.payment_intent
+      :paid
+    end
+  end
+
+  def report_checkout_error(session, error)
+    Rails.error.report error, context: { invoice_id: id, session_id: session.id, payment_status: session.payment_status,
+      currency: session.currency, expected: total, actual: session.amount_total }, handled: true
+    :unchanged
+  end
+
+  def forget_checkout_session(session)
+    update! stripe_checkout_session_id: nil if sent? && session.id == stripe_checkout_session_id
   end
 
   def record_payment!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)

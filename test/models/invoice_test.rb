@@ -529,17 +529,17 @@ class InvoiceTest < ActiveSupport::TestCase
     end
   end
 
-  test "create_checkout_session! asks Stripe for a card-only session" do
+  test "create_checkout_session! leaves the payment methods to the Stripe Dashboard" do
     invoice = invoices(:sakura_january)
     attach_fake_deliverables invoice
     Stripe::Customer.stubs(:retrieve).returns(Stripe::Customer.construct_from(id: "cus_test_sakura123"))
     Stripe::Checkout::Session.expects(:create)
-      .with(has_entry(:payment_method_types, [ "card" ]))
-      .returns(Stripe::Checkout::Session.construct_from(id: "cs_card_only"))
+      .with(Not(has_key(:payment_method_types)))
+      .returns(Stripe::Checkout::Session.construct_from(id: "cs_any_method"))
 
     invoice.create_checkout_session!
 
-    assert_equal "cs_card_only", invoice.reload.stripe_checkout_session_id
+    assert_equal "cs_any_method", invoice.reload.stripe_checkout_session_id
   end
 
   test "create_checkout_session! keeps the session that paid while the new one was being created" do
@@ -595,13 +595,129 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_nil invoice.reload.stripe_checkout_session_id
   end
 
-  test "an unpaid completed session leaves the invoice sent and is reported" do
+  test "a completed session still awaiting a delayed payment changes nothing" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+
+    %w[ requires_action processing ].each do |status|
+      assert_no_error_reported do
+        assert_no_enqueued_emails do
+          outcome = Invoice.apply_checkout_session unpaid_session(invoice, id: "cs_konbini"), payment_intent: payment_intent(status:)
+          assert_equal :pending, outcome
+        end
+      end
+    end
+
+    invoice.reload
+    assert invoice.sent?
+    assert_equal "cs_konbini", invoice.stripe_checkout_session_id
+  end
+
+  test "a completed unpaid session without its payment intent is treated as pending" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+
+    assert_no_error_reported do
+      assert_equal :pending, Invoice.apply_checkout_session(unpaid_session(invoice, id: "cs_konbini"))
+    end
+    assert_equal "cs_konbini", invoice.reload.stripe_checkout_session_id
+  end
+
+  test "a delayed payment that settles later pays once and sends one receipt" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+
+    assert_enqueued_emails 1 do
+      Invoice.apply_checkout_session unpaid_session(invoice, id: "cs_konbini"), payment_intent: payment_intent(status: "requires_action")
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_konbini", payment_intent: "pi_konbini")
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_konbini", payment_intent: "pi_konbini")
+    end
+
+    invoice.reload
+    assert invoice.paid?
+    assert_equal "pi_konbini", invoice.stripe_payment_intent_id
+  end
+
+  test "a settled payment seen before its completion pays once" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+
+    assert_enqueued_emails 1 do
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_konbini", payment_intent: "pi_konbini")
+      assert_no_error_reported do
+        Invoice.apply_checkout_session unpaid_session(invoice, id: "cs_konbini"), payment_intent: payment_intent(status: "requires_action")
+      end
+    end
+    assert invoice.reload.paid?
+  end
+
+  test "a failed delayed payment clears the stored session so the client can pay again" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    %w[ requires_payment_method canceled ].each do |status|
+      invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+
+      assert_no_error_reported do
+        assert_no_enqueued_emails do
+          Invoice.apply_checkout_session unpaid_session(invoice, id: "cs_konbini"), payment_intent: payment_intent(status:)
+        end
+      end
+
+      invoice.reload
+      assert invoice.sent?
+      assert_nil invoice.stripe_checkout_session_id
+    end
+  end
+
+  test "a failed delayed payment leaves a newer session alone" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns stripe_checkout_session_id: "cs_retry"
+
+    Invoice.apply_checkout_session unpaid_session(invoice, id: "cs_konbini"), payment_intent: payment_intent(status: "requires_payment_method")
+
+    assert_equal "cs_retry", invoice.reload.stripe_checkout_session_id
+  end
+
+  test "a failed delayed payment leaves an invoice that is not sent alone" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns status: "preparing", stripe_checkout_session_id: "cs_konbini"
+
+    Invoice.apply_checkout_session unpaid_session(invoice, id: "cs_konbini"), payment_intent: payment_intent(status: "requires_payment_method")
+
+    assert_equal "cs_konbini", invoice.reload.stripe_checkout_session_id
+  end
+
+  test "a completed session with no payment required is reported" do
     invoice = invoices(:sakura_january)
 
     assert_error_reported(Invoice::UnpaidCheckoutError) do
-      Invoice.apply_checkout_session paid_session(invoice, payment_status: "unpaid")
+      Invoice.apply_checkout_session paid_session(invoice, payment_status: "no_payment_required")
     end
     assert invoice.reload.sent?
+  end
+
+  test "reconcile_checkout_session fetches the payment intent only for a completed unpaid session" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+    Stripe::PaymentIntent.expects(:retrieve).with("pi_konbini").returns(payment_intent(status: "requires_payment_method"))
+
+    Invoice.reconcile_checkout_session unpaid_session(invoice, id: "cs_konbini", payment_intent: "pi_konbini")
+
+    assert_nil invoice.reload.stripe_checkout_session_id
+  end
+
+  test "reconcile_checkout_session makes no extra Stripe call for a paid, open or expired session" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    Stripe::PaymentIntent.expects(:retrieve).never
+
+    Invoice.reconcile_checkout_session checkout_session(id: "cs_open", status: "open", metadata: { invoice_id: invoice.id.to_s })
+    Invoice.reconcile_checkout_session expired_session(invoice, id: "cs_old")
+    assert_equal :paid, Invoice.reconcile_checkout_session(paid_session(invoice, id: "cs_paid"))
   end
 
   test "a session in another currency or for another amount is reported" do
@@ -684,6 +800,15 @@ class InvoiceTest < ActiveSupport::TestCase
   def paid_session(invoice, id: "cs_test", payment_intent: "pi_test", payment_status: "paid", currency: "jpy", amount_total: invoice.total)
     checkout_session(id:, status: "complete", payment_status:, currency:, amount_total:, payment_intent:,
       metadata: { invoice_id: invoice.id.to_s })
+  end
+
+  def unpaid_session(invoice, id:, payment_intent: "pi_test")
+    checkout_session(id:, status: "complete", payment_status: "unpaid", currency: "jpy", amount_total: invoice.total,
+      payment_intent:, metadata: { invoice_id: invoice.id.to_s })
+  end
+
+  def payment_intent(status:)
+    Stripe::PaymentIntent.construct_from(id: "pi_test", status:)
   end
 
   def expired_session(invoice, id:)
