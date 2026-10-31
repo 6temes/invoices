@@ -7,14 +7,14 @@ class Webhooks::StripeEventNotificationsControllerTest < ActionDispatch::Integra
     assert_enqueued_with job: CheckoutSessionReconciliationJob, args: [ "cs_thin_completed" ] do
       post_notification type: "v1.checkout.session.completed", session_id: "cs_thin_completed"
     end
-    assert_response :ok
+    assert_response :accepted
   end
 
   test "a signed expired notification enqueues reconciliation of its session" do
     assert_enqueued_with job: CheckoutSessionReconciliationJob, args: [ "cs_thin_expired" ] do
       post_notification type: "v1.checkout.session.expired", session_id: "cs_thin_expired"
     end
-    assert_response :ok
+    assert_response :accepted
   end
 
   test "a notification signed with another secret is rejected" do
@@ -42,7 +42,7 @@ class Webhooks::StripeEventNotificationsControllerTest < ActionDispatch::Integra
         post_notification type: "v1.customer.created", related_object: { id: "cus_test", type: "customer", url: "/v1/customers/cus_test" }
       end
     end
-    assert_response :ok
+    assert_response :accepted
   end
 
   test "a destination ping is acknowledged silently" do
@@ -51,7 +51,7 @@ class Webhooks::StripeEventNotificationsControllerTest < ActionDispatch::Integra
         post_notification type: "v2.core.event_destination.ping", related_object: nil
       end
     end
-    assert_response :ok
+    assert_response :accepted
   end
 
   private

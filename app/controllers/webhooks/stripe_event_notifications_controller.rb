@@ -4,7 +4,7 @@ class Webhooks::StripeEventNotificationsController < ApplicationController
 
   def create
     StripeEventNotification.receive request.raw_post, request.headers["Stripe-Signature"]
-    head :ok
+    head :accepted
   rescue JSON::ParserError, Stripe::SignatureVerificationError
     head :bad_request
   end
