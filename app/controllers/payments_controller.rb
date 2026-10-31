@@ -10,6 +10,7 @@ class PaymentsController < ApplicationController
   before_action :set_invoice
 
   def show
+    @checkout_pending = checkout_pending?
     render :thank_you if @invoice.paid?
   end
 
@@ -17,7 +18,11 @@ class PaymentsController < ApplicationController
     return redirect_to public_payment_path(params[:token]) unless @invoice.sent?
 
     session = find_or_create_checkout_session
-    redirect_to session.url, allow_other_host: true
+    if session
+      redirect_to session.url, allow_other_host: true
+    else
+      redirect_to public_payment_path(params[:token])
+    end
   rescue Invoice::InvalidStatusError
     redirect_to public_payment_path(params[:token])
   rescue Stripe::StripeError => e
@@ -38,14 +43,20 @@ class PaymentsController < ApplicationController
     render :invalid_link, status: :not_found
   end
 
+  def checkout_pending?
+    @invoice.sent? && @invoice.client.credit_card? && @invoice.checkout_pending?
+  rescue Stripe::StripeError => e
+    Rails.error.report e, context: { invoice_id: @invoice.id }
+    false
+  end
+
   def find_or_create_checkout_session
     @invoice.reload
 
     if @invoice.stripe_checkout_session_id.present?
       existing = Stripe::Checkout::Session.retrieve @invoice.stripe_checkout_session_id
       return existing if existing.status == "open"
-
-      @invoice.apply_checkout_session existing if existing.status == "complete"
+      return if existing.status == "complete" && @invoice.reconcile_checkout_session(existing) == :pending
     end
 
     @invoice.create_checkout_session!

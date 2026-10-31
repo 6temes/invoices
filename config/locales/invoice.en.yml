@@ -31,8 +31,9 @@ en:
     bank_account_holder: Account Holder
     bank_account_type: Account Type
     bank_account_number: Account No.
-    pay_with_credit_card: Pay with Credit Card
+    pay: Pay now
     payment_error: "The payment could not be processed. Please try again in a few minutes."
+    payment_pending: "A payment for this invoice is already in progress. I'll send a receipt by email once it arrives."
     retainer_subject: Web development and maintenance
     retainer_subject_with_infrastructure: Web development, maintenance, and server infrastructure
     retainer_line: "Monthly retainer for %{subject}, %{period} (includes %{hours} hours)"
@@ -47,7 +48,7 @@ en:
     footer:
       automated: "This message was sent automatically."
     shared:
-      pay_note: "Card payments are processed by Stripe."
+      pay_note: "Payments are processed by Stripe."
     send_invoice:
       subject: "Invoice #%{number}: %{invoice_subject}"
       preheader: "Invoice #%{number} for %{period}, due %{due_date}."

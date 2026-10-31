@@ -18,10 +18,12 @@
       <div class="detail-value"><%= @invoice.due_date %></div>
     </div>
 
-    <% if @invoice.sent? && @invoice.client.credit_card? %>
+    <% if @checkout_pending %>
+      <p class="payment-pending mt-3"><%= t("invoice.payment_pending") %></p>
+    <% elsif @invoice.sent? && @invoice.client.credit_card? %>
       <div class="mt-3">
         <%= form_with url: public_payment_create_path(params[:token]), method: :post do %>
-          <%= submit_tag t("invoice.pay_with_credit_card"), class: "btn btn-accent btn-lg" %>
+          <%= submit_tag t("invoice.pay"), class: "btn btn-accent btn-lg" %>
         <% end %>
       </div>
     <% elsif @invoice.sent? %>

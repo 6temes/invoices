@@ -17,6 +17,8 @@ class StripeEventNotification
     end.tap do |handler|
       handler.on_v1_checkout_session_completed { CheckoutSessionReconciliationJob.perform_later it.related_object.id }
       handler.on_v1_checkout_session_expired { CheckoutSessionReconciliationJob.perform_later it.related_object.id }
+      handler.on_v1_checkout_session_async_payment_succeeded { CheckoutSessionReconciliationJob.perform_later it.related_object.id }
+      handler.on_v1_checkout_session_async_payment_failed { CheckoutSessionReconciliationJob.perform_later it.related_object.id }
       handler.on_v2_core_event_destination_ping { }
     end
   end

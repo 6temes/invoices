@@ -17,6 +17,15 @@ class Webhooks::StripeEventNotificationsControllerTest < ActionDispatch::Integra
     assert_response :accepted
   end
 
+  test "signed delayed payment notifications enqueue reconciliation of their session" do
+    %w[ v1.checkout.session.async_payment_succeeded v1.checkout.session.async_payment_failed ].each do |type|
+      assert_enqueued_with job: CheckoutSessionReconciliationJob, args: [ "cs_thin_konbini" ] do
+        post_notification type:, session_id: "cs_thin_konbini"
+      end
+      assert_response :accepted
+    end
+  end
+
   test "a notification signed with another secret is rejected" do
     assert_no_enqueued_jobs do
       post_notification type: "v1.checkout.session.completed", secret: "whsec_someone_else"
