@@ -515,4 +515,157 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_includes Invoice.for_year(2026), invoices(:acme_january)
     assert_not_includes Invoice.for_year(2025), invoices(:acme_january)
   end
+  # --- Payment races and Stripe Checkout reconciliation ---
+
+  test "mark_as_paid! raises on an invoice another caller already paid, and sends no second receipt" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    stale = Invoice.find invoice.id
+
+    invoice.mark_as_paid!
+
+    assert_no_enqueued_emails do
+      assert_raises(Invoice::InvalidStatusError) { stale.mark_as_paid! }
+    end
+  end
+
+  test "create_checkout_session! asks Stripe for a card-only session" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    Stripe::Customer.stubs(:retrieve).returns(Stripe::Customer.construct_from(id: "cus_test_sakura123"))
+    Stripe::Checkout::Session.expects(:create)
+      .with(has_entry(:payment_method_types, [ "card" ]))
+      .returns(Stripe::Checkout::Session.construct_from(id: "cs_card_only"))
+
+    invoice.create_checkout_session!
+
+    assert_equal "cs_card_only", invoice.reload.stripe_checkout_session_id
+  end
+
+  test "a paid checkout session marks the invoice paid and sends one receipt" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    assert_enqueued_emails 1 do
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_paid", payment_intent: "pi_paid")
+    end
+
+    invoice.reload
+    assert invoice.paid?
+    assert_equal invoice.total, invoice.paid_amount
+    assert_equal "cs_paid", invoice.stripe_checkout_session_id
+    assert_equal "pi_paid", invoice.stripe_payment_intent_id
+  end
+
+  test "the same paid session applied twice pays once, even from a stale copy" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    stale = Invoice.find invoice.id
+    session = paid_session(invoice, id: "cs_twice")
+
+    assert_enqueued_emails 1 do
+      invoice.apply_checkout_session session
+      assert_no_error_reported { stale.apply_checkout_session session }
+    end
+    assert invoice.reload.paid?
+  end
+
+  test "a paid session for an invoice marked paid by hand is reported, not recorded" do
+    invoice = invoices(:acme_january)
+    attach_fake_deliverables invoice
+    assert_nil invoice.stripe_checkout_session_id
+
+    assert_no_enqueued_emails do
+      assert_error_reported(Invoice::UnrecordedPaymentError) do
+        Invoice.apply_checkout_session paid_session(invoice, id: "cs_second", payment_intent: "pi_second")
+      end
+    end
+    assert_nil invoice.reload.stripe_checkout_session_id
+  end
+
+  test "an unpaid completed session leaves the invoice sent and is reported" do
+    invoice = invoices(:sakura_january)
+
+    assert_error_reported(Invoice::UnpaidCheckoutError) do
+      Invoice.apply_checkout_session paid_session(invoice, payment_status: "unpaid")
+    end
+    assert invoice.reload.sent?
+  end
+
+  test "a session in another currency or for another amount is reported" do
+    invoice = invoices(:sakura_january)
+
+    assert_error_reported(Invoice::CurrencyMismatchError) do
+      Invoice.apply_checkout_session paid_session(invoice, currency: "usd")
+    end
+    assert_error_reported(Invoice::AmountMismatchError) do
+      Invoice.apply_checkout_session paid_session(invoice, amount_total: 1)
+    end
+    assert invoice.reload.sent?
+  end
+
+  test "a session without an invoice, or naming an unknown one, is reported" do
+    assert_error_reported(Invoice::MissingMetadataError) do
+      Invoice.apply_checkout_session checkout_session(id: "cs_orphan", status: "complete", metadata: {})
+    end
+    assert_error_reported(Invoice::InvoiceNotFoundError) do
+      Invoice.apply_checkout_session checkout_session(id: "cs_unknown", status: "complete", metadata: { invoice_id: "0" })
+    end
+  end
+
+  test "a paid session for a draft invoice raises" do
+    assert_raises Invoice::InvalidStatusError do
+      Invoice.apply_checkout_session paid_session(invoices(:acme_february_draft))
+    end
+  end
+
+  test "an expired session clears the stored id only when it is the current one" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_new"
+
+    Invoice.apply_checkout_session expired_session(invoice, id: "cs_old")
+    assert_equal "cs_new", invoice.reload.stripe_checkout_session_id
+
+    Invoice.apply_checkout_session expired_session(invoice, id: "cs_new")
+    assert_nil invoice.reload.stripe_checkout_session_id
+  end
+
+  test "an expired session leaves a paid invoice alone" do
+    invoice = invoices(:acme_january)
+    attach_fake_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_paid_earlier"
+
+    assert_no_enqueued_emails do
+      Invoice.apply_checkout_session expired_session(invoice, id: "cs_paid_earlier")
+    end
+    assert_equal "cs_paid_earlier", invoice.reload.stripe_checkout_session_id
+  end
+
+  test "an open session changes nothing" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns stripe_checkout_session_id: "cs_open"
+
+    assert_no_error_reported do
+      Invoice.apply_checkout_session checkout_session(id: "cs_open", status: "open", metadata: { invoice_id: invoice.id.to_s })
+    end
+    invoice.reload
+    assert invoice.sent?
+    assert_equal "cs_open", invoice.stripe_checkout_session_id
+  end
+
+  private
+
+  def checkout_session(**attributes)
+    Stripe::Checkout::Session.construct_from(attributes)
+  end
+
+  def paid_session(invoice, id: "cs_test", payment_intent: "pi_test", payment_status: "paid", currency: "jpy", amount_total: invoice.total)
+    checkout_session(id:, status: "complete", payment_status:, currency:, amount_total:, payment_intent:,
+      metadata: { invoice_id: invoice.id.to_s })
+  end
+
+  def expired_session(invoice, id:)
+    checkout_session(id:, status: "expired", payment_status: "unpaid", metadata: { invoice_id: invoice.id.to_s })
+  end
 end

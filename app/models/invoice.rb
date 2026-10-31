@@ -1,6 +1,14 @@
 class Invoice < ApplicationRecord
   class InvalidStatusError < StandardError; end
 
+  CheckoutError = Class.new(StandardError)
+  AmountMismatchError = Class.new(CheckoutError)
+  CurrencyMismatchError = Class.new(CheckoutError)
+  InvoiceNotFoundError = Class.new(CheckoutError)
+  MissingMetadataError = Class.new(CheckoutError)
+  UnpaidCheckoutError = Class.new(CheckoutError)
+  UnrecordedPaymentError = Class.new(CheckoutError)
+
   # Stated on the expired-link page, so it has to live somewhere both it and the
   # mailer can read.
   PAYMENT_LINK_VALIDITY = 60.days
@@ -66,14 +74,50 @@ class Invoice < ApplicationRecord
     self.total = subtotal + tax_amount
   end
 
-  def mark_as_paid!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
-    update!(status: :paid, paid_on:, paid_amount: total,
-            stripe_checkout_session_id:, stripe_payment_intent_id:)
+  def self.apply_checkout_session(session)
+    invoice_id = session.metadata["invoice_id"]
+    unless invoice_id
+      Rails.error.report MissingMetadataError.new("Checkout session has no invoice_id in metadata"),
+        context: { session_id: session.id }, handled: true
+      return
+    end
 
-    # Enqueue after the update! commits (Rails 8.1 enqueue_after_transaction_commit
-    # defaults to false, and no caller wraps this in an outer transaction). This is
-    # the single choke point for both the Stripe-webhook and manual-mark paths.
-    InvoiceMailer.send_receipt(self).deliver_later
+    invoice = find_by(id: invoice_id)
+    unless invoice
+      Rails.error.report InvoiceNotFoundError.new("Checkout session names an unknown invoice"),
+        context: { invoice_id:, session_id: session.id }, handled: true
+      return
+    end
+
+    invoice.apply_checkout_session session
+  end
+
+  # Webhooks arrive in any order and more than once, so the outcome depends only on
+  # the session's current state and the invoice's, read under the row lock.
+  def apply_checkout_session(session)
+    paid_now = with_lock do
+      if paid?
+        report_unrecorded_payment session if session.payment_status == "paid" && session.id != stripe_checkout_session_id
+        next false
+      end
+
+      case session.status
+      when "expired"
+        update! stripe_checkout_session_id: nil if sent? && session.id == stripe_checkout_session_id
+        false
+      when "complete"
+        record_checkout_payment session
+      else
+        false
+      end
+    end
+
+    send_receipt if paid_now
+  end
+
+  def mark_as_paid!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
+    with_lock { record_payment!(paid_on:, stripe_checkout_session_id:, stripe_payment_intent_id:) }
+    send_receipt
   end
 
   def can_send_reminder?
@@ -143,6 +187,7 @@ class Invoice < ApplicationRecord
         quantity: 1
       } ],
       mode: "payment",
+      payment_method_types: [ "card" ],
       success_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
       cancel_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
       metadata: { invoice_id: id }
@@ -166,6 +211,45 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def record_checkout_payment(session)
+    context = { invoice_id: id, session_id: session.id }
+
+    error =
+      if session.payment_status != "paid"
+        UnpaidCheckoutError.new("Checkout session completed without payment")
+      elsif session.currency != "jpy"
+        CurrencyMismatchError.new("Checkout session currency mismatch")
+      elsif session.amount_total != total
+        AmountMismatchError.new("Checkout session amount mismatch")
+      end
+
+    if error
+      Rails.error.report error, context: context.merge(payment_status: session.payment_status,
+        currency: session.currency, expected: total, actual: session.amount_total), handled: true
+      return false
+    end
+
+    record_payment! stripe_checkout_session_id: session.id, stripe_payment_intent_id: session.payment_intent
+    true
+  end
+
+  def record_payment!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
+    raise InvalidStatusError, "Invoice must be sent to mark as paid" unless sent?
+
+    update! status: :paid, paid_on:, paid_amount: total, stripe_checkout_session_id:, stripe_payment_intent_id:
+  end
+
+  def report_unrecorded_payment(session)
+    Rails.error.report UnrecordedPaymentError.new("Paid checkout session for an invoice already paid another way"),
+      context: { invoice_id: id, session_id: session.id, payment_intent_id: session.payment_intent }, handled: true
+  end
+
+  # The lock's transaction has committed by now, and enqueue_after_transaction_commit
+  # is off, so enqueueing inside it would send a receipt for a rolled-back payment.
+  def send_receipt
+    InvoiceMailer.send_receipt(self).deliver_later
+  end
 
   def at_least_one_line_item
     return if line_items.reject(&:marked_for_destruction?).any?
