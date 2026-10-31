@@ -1,7 +1,7 @@
-class StripeEventNotificationGateway
+class StripeEventNotification
   UnhandledEventError = Class.new(StandardError)
 
-  def self.handle(payload, signature)
+  def self.receive(payload, signature)
     handler.handle payload, signature
   end
 

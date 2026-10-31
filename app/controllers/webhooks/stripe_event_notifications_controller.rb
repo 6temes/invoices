@@ -3,7 +3,7 @@ class Webhooks::StripeEventNotificationsController < ApplicationController
   skip_forgery_protection
 
   def create
-    StripeEventNotificationGateway.handle request.raw_post, request.headers["Stripe-Signature"]
+    StripeEventNotification.receive request.raw_post, request.headers["Stripe-Signature"]
     head :ok
   rescue JSON::ParserError, Stripe::SignatureVerificationError
     head :bad_request

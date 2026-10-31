@@ -37,7 +37,7 @@ class Webhooks::StripeEventNotificationsControllerTest < ActionDispatch::Integra
   end
 
   test "an event type the app does not handle is acknowledged and reported" do
-    assert_error_reported(StripeEventNotificationGateway::UnhandledEventError) do
+    assert_error_reported(StripeEventNotification::UnhandledEventError) do
       assert_no_enqueued_jobs do
         post_notification type: "v1.customer.created", related_object: { id: "cus_test", type: "customer", url: "/v1/customers/cus_test" }
       end
