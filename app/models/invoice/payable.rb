@@ -88,7 +88,7 @@ module Invoice::Payable
   end
 
   def create_checkout_session!
-    raise Invoice::InvalidStatusError, "Cannot create checkout session for paid invoice" if paid?
+    raise Invoice::InvalidStatusError, "Cannot create checkout session with nothing due" unless amount_due.positive?
 
     token = signed_id purpose: :payment, expires_in: 60.days
     host = default_host
@@ -99,7 +99,7 @@ module Invoice::Payable
         price_data: {
           currency: CURRENCY,
           product_data: { name: "Invoice ##{invoice_number} — #{subject}" },
-          unit_amount: total
+          unit_amount: amount_due
         },
         quantity: 1
       } ],

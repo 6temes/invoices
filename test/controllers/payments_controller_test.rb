@@ -16,6 +16,13 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: /#{@invoice.invoice_number}/
   end
 
+  test "show asks only for what is still due" do
+    @invoice.update_columns paid_amount: 100_000
+    get public_payment_path(token: @token)
+
+    assert_select ".payment-amount .summary-card-value", text: "¥147,500"
+  end
+
   test "show renders thank_you for paid invoice" do
     invoice = invoices(:acme_january)
     invoice.pdf.attach io: StringIO.new("%PDF-1.4"), filename: "test.pdf", content_type: "application/pdf"

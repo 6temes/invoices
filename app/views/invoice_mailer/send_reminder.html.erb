@@ -11,7 +11,7 @@
 
 <%= render "amount_summary",
       number: @invoice.invoice_number,
-      amount: @invoice.total,
+      amount: @invoice.amount_due,
       amount_label: t("invoice.amount_due"),
       date_label: t("invoice.due_date"),
       date: @invoice.due_date %>

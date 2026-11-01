@@ -125,6 +125,35 @@
   <% end %>
 </div>
 
+<% if invoice.payments.any? %>
+  <div class="card mt-2" id="payments">
+    <table>
+      <thead>
+        <tr>
+          <th><%= t("invoice.payments") %></th>
+          <th><%= t("invoice.paid_on") %></th>
+          <th class="text-right"><%= t("invoice.paid_amount") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% invoice.payments.order(:created_at).each do |payment| %>
+          <tr>
+            <td><%= t("invoice.payment_kinds.#{payment.kind}") %></td>
+            <td><%= l payment.created_at.to_date %></td>
+            <td class="text-right currency">¥<%= number_with_delimiter payment.amount %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2" class="text-right"><strong><%= t("invoice.amount_due") %></strong></td>
+          <td class="text-right currency"><strong>¥<%= number_with_delimiter invoice.amount_due %></strong></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+<% end %>
+
 <% if invoice.paid? %>
   <div class="card mt-2">
     <div class="detail-grid">

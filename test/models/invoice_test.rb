@@ -566,6 +566,31 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal "cs_any_method", invoice.reload.stripe_checkout_session_id
   end
 
+  test "create_checkout_session! charges what is still due, and refuses when nothing is" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    invoice.update_columns paid_amount: 100_000
+    Stripe::Customer.stubs(:retrieve).returns(Stripe::Customer.construct_from(id: "cus_test_sakura123"))
+    Stripe::Checkout::Session.expects(:create)
+      .with { it[:line_items].sole[:price_data][:unit_amount] == 147_500 }
+      .returns(Stripe::Checkout::Session.construct_from(id: "cs_remaining"))
+
+    invoice.create_checkout_session!
+
+    invoice.update_columns paid_amount: invoice.total
+    assert_raises(Invoice::InvalidStatusError) { invoice.create_checkout_session! }
+  end
+
+  test "the PDF lists payments received and labels the last row as the amount due" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns paid_amount: 100_000
+
+    html = Nokogiri::HTML(ApplicationController.render(partial: "invoices/pdf_template", locals: { invoice:, business: businesses(:default) }))
+
+    assert_includes html.at_css(".totals").text, "−¥100,000"
+    assert_equal [ "請求金額", "¥147,500" ], html.css(".grand-total span").map { it.text.strip }
+  end
+
   test "create_checkout_session! keeps the session that paid while the new one was being created" do
     invoice = invoices(:sakura_january)
     attach_fake_deliverables invoice

@@ -270,6 +270,18 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Send reminder"
   end
 
+  test "show lists the payments received and what is still due" do
+    invoice = invoices(:sakura_january)
+    invoice.payments.create! kind: :checkout, amount: 100_000, stripe_payment_intent_id: "pi_part"
+    invoice.update_columns paid_amount: 100_000
+
+    get invoice_path(invoice)
+
+    assert_select "#payments tbody tr", 1
+    assert_select "#payments", text: /¥100,000/
+    assert_select "#payments", text: /¥147,500/
+  end
+
   test "payment asks to confirm the amount it will record for a sent invoice" do
     invoices(:sakura_january).update_columns paid_amount: 100_000
     get payment_invoice_path(invoices(:sakura_january))

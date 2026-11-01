@@ -41,6 +41,11 @@ en:
     extra_hours_generic: "Additional development hours beyond retainer (%{hours}h)"
     month_year: "%{month_name} %{year}"
     payments: Payments
+    payment_kinds:
+      balance: Stripe balance
+      checkout: Stripe Checkout
+      credit: Credit
+      manual: Recorded by hand
     thank_you_title: Thank you for your payment
     thank_you_body: "Invoice #%{number} has been paid."
 
