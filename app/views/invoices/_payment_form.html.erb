@@ -19,7 +19,8 @@
   </div>
 
   <div class="form-actions">
-    <%= submit_tag(editing ? "Save" : "Confirm payment", class: "btn btn-accent", data: { turbo_submits_with: "Saving..." }) %>
+    <%= submit_tag(editing ? "Save" : "Confirm payment", class: "btn btn-accent",
+          data: { turbo_submits_with: "Saving...", turbo_confirm: ("Record ¥#{number_with_delimiter invoice.amount_due} as received?" unless editing) }) %>
     <%= link_to "Cancel", invoice_path(invoice), class: "btn", data: { turbo_frame: "_top", action: "slideover#close" } %>
   </div>
 <% end %>

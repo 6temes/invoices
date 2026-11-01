@@ -606,17 +606,98 @@ class InvoiceTest < ActiveSupport::TestCase
     assert invoice.reload.paid?
   end
 
-  test "a paid session for an invoice marked paid by hand is reported, not recorded" do
-    invoice = invoices(:acme_january)
-    attach_fake_deliverables invoice
-    assert_nil invoice.stripe_checkout_session_id
+  test "a bank transfer that settles just after a manual mark is kept as nothing and sent back to the client's bank" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    invoice.mark_as_paid!
+    stub_payment_method "pi_transfer", "customer_balance"
+    Stripe::Refund.expects(:create)
+      .with({ payment_intent: "pi_transfer", amount: invoice.total, instructions_email: invoice.client.email }, anything)
+      .returns(Stripe::Refund.construct_from(id: "re_transfer"))
 
     assert_no_enqueued_emails do
-      assert_error_reported(Invoice::UnrecordedPaymentError) do
-        Invoice.apply_checkout_session paid_session(invoice, id: "cs_second", payment_intent: "pi_second")
+      assert_no_error_reported do
+        Invoice.apply_checkout_session paid_session(invoice, id: "cs_late", payment_intent: "pi_transfer")
       end
     end
-    assert_nil invoice.reload.stripe_checkout_session_id
+
+    payment = invoice.payments.find_by!(stripe_payment_intent_id: "pi_transfer")
+    assert_equal [ 0, invoice.total, "re_transfer" ], [ payment.amount, payment.excess_amount, payment.stripe_refund_id ]
+    assert_equal invoice.total, invoice.reload.paid_amount
+  end
+
+  test "a payment below the amount due is recorded and leaves the invoice sent" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+
+    assert_no_enqueued_emails do
+      Invoice.apply_checkout_session paid_session(invoice, payment_intent: "pi_part", amount_total: 100_000)
+    end
+
+    invoice.reload
+    assert invoice.sent?
+    assert_equal 100_000, invoice.paid_amount
+    assert_equal 147_500, invoice.amount_due
+  end
+
+  test "a card payment above the amount due keeps what is owed and refunds the rest to the card" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    stub_payment_method "pi_over", "card"
+    Stripe::Refund.expects(:create)
+      .with({ payment_intent: "pi_over", amount: 2_500 }, has_entry(idempotency_key: regexp_matches(/\Aexcess-\d+\z/)))
+      .returns(Stripe::Refund.construct_from(id: "re_over"))
+
+    assert_enqueued_emails 1 do
+      Invoice.apply_checkout_session paid_session(invoice, payment_intent: "pi_over", amount_total: invoice.total + 2_500)
+    end
+
+    payment = invoice.payments.sole
+    assert_equal [ invoice.total, 2_500, "re_over" ], [ payment.amount, payment.excess_amount, payment.stripe_refund_id ]
+    assert invoice.reload.paid?
+  end
+
+  test "a failed refund raises, keeps the excess on the row and is retried from it" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    stub_payment_method "pi_over", "card"
+    Stripe::Refund.stubs(:create).raises(Stripe::APIConnectionError.new("timeout")).then.returns(Stripe::Refund.construct_from(id: "re_retry"))
+    session = paid_session(invoice, payment_intent: "pi_over", amount_total: invoice.total + 2_500)
+
+    assert_raises(Stripe::APIConnectionError) { Invoice.apply_checkout_session session }
+    payment = invoice.payments.sole
+    assert_equal [ 2_500, nil ], [ payment.excess_amount, payment.stripe_refund_id ]
+
+    Invoice.apply_checkout_session session
+    assert_equal "re_retry", payment.reload.stripe_refund_id
+    assert_equal 1, invoice.payments.count
+  end
+
+  test "marking a partly paid invoice paid records the remainder and cancels the transfer still awaiting funds" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    Invoice.apply_checkout_session paid_session(invoice, id: "cs_part", payment_intent: "pi_part", amount_total: 100_000)
+    invoice.update_columns stripe_checkout_session_id: "cs_transfer"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_transfer").returns(unpaid_session(invoice, id: "cs_transfer", payment_intent: "pi_transfer"))
+    Stripe::PaymentIntent.stubs(:retrieve).with("pi_transfer").returns(payment_intent(id: "pi_transfer", status: "requires_action"))
+    Stripe::PaymentIntent.expects(:cancel).with("pi_transfer")
+
+    invoice.reload.mark_as_paid!
+
+    assert invoice.reload.paid?
+    assert_equal [ 100_000, 147_500 ], invoice.payments.order(:id).pluck(:amount)
+    assert_equal "manual", invoice.payments.order(:id).last.kind
+  end
+
+  test "marking an invoice paid expires its open Checkout session, and a Stripe failure there does not stop it" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_open"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_open").returns(checkout_session(id: "cs_open", status: "open"))
+    Stripe::Checkout::Session.expects(:expire).with("cs_open").raises(Stripe::InvalidRequestError.new("already expired", nil))
+
+    assert_error_reported(Stripe::InvalidRequestError) { invoice.mark_as_paid! }
+    assert invoice.reload.paid?
   end
 
   test "a completed session still awaiting a delayed payment changes nothing" do
@@ -763,16 +844,14 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal :paid, Invoice.reconcile_checkout_session(paid_session(invoice, id: "cs_paid"))
   end
 
-  test "a session in another currency or for another amount is reported" do
+  test "a session in another currency is reported, not recorded" do
     invoice = invoices(:sakura_january)
 
     assert_error_reported(Invoice::CurrencyMismatchError) do
       Invoice.apply_checkout_session paid_session(invoice, currency: "usd")
     end
-    assert_error_reported(Invoice::AmountMismatchError) do
-      Invoice.apply_checkout_session paid_session(invoice, amount_total: 1)
-    end
     assert invoice.reload.sent?
+    assert_empty invoice.payments
   end
 
   test "a session without an invoice, or naming an unknown one, is reported" do
@@ -850,8 +929,13 @@ class InvoiceTest < ActiveSupport::TestCase
       payment_intent:, metadata: { invoice_id: invoice.id.to_s })
   end
 
-  def payment_intent(status:)
-    Stripe::PaymentIntent.construct_from(id: "pi_test", status:)
+  def payment_intent(status:, id: "pi_test")
+    Stripe::PaymentIntent.construct_from(id:, status:)
+  end
+
+  def stub_payment_method(payment_intent_id, type)
+    Stripe::PaymentIntent.stubs(:retrieve).with(id: payment_intent_id, expand: [ "payment_method" ])
+      .returns(Stripe::PaymentIntent.construct_from(id: payment_intent_id, payment_method: { type: }))
   end
 
   def expired_session(invoice, id:)

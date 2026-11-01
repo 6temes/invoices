@@ -40,6 +40,10 @@ class ListInvoicesToolTest < ActiveSupport::TestCase
     assert_equal "2026-02-15", invoice["paid_on"]
   end
 
+  test "carries what is still owed" do
+    assert_equal({ 145 => 0, 146 => 247_500 }, listed_invoices(year: 2026).to_h { [ it["invoice_number"], it["amount_due"] ] })
+  end
+
   test "runs a fixed number of queries" do
     assert_queries_count(2) { listed_invoices(year: 2026) }
   end

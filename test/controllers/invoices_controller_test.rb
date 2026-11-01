@@ -270,9 +270,11 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Send reminder"
   end
 
-  test "payment renders the slideover form for a sent invoice" do
+  test "payment asks to confirm the amount it will record for a sent invoice" do
+    invoices(:sakura_january).update_columns paid_amount: 100_000
     get payment_invoice_path(invoices(:sakura_january))
     assert_response :success
+    assert_select "input[type=submit][data-turbo-confirm*=?]", "¥147,500"
   end
 
   test "payment renders the slideover form for a paid invoice" do
