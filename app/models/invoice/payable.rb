@@ -5,6 +5,7 @@ module Invoice::Payable
   CurrencyMismatchError = Class.new(CheckoutError)
   InvoiceNotFoundError = Class.new(CheckoutError)
   MissingMetadataError = Class.new(CheckoutError)
+  UnrecordedPaymentError = Class.new(CheckoutError)
   UnpaidCheckoutError = Class.new(CheckoutError)
 
   CURRENCY = "jpy"
@@ -76,6 +77,8 @@ module Invoice::Payable
   end
 
   def mark_as_paid!(paid_on: Date.current)
+    return if apply_paid_stored_checkout == :paid
+
     stored_session_id = nil
     outcome = with_lock do
       raise Invoice::InvalidStatusError, "Invoice must be sent to mark as paid" unless sent?
@@ -85,6 +88,15 @@ module Invoice::Payable
     end
 
     settle_payment outcome, pending_session_id: stored_session_id
+  end
+
+  # The payment that settled the invoice carries the same date, so a correction moves both.
+  def correct_paid_on(paid_on)
+    with_lock do
+      update(paid_on:).tap do |updated|
+        payments.succeeded.where(amount: 1..).order(:id).last.update!(paid_on: self.paid_on) if updated
+      end
+    end
   end
 
   def create_checkout_session!
@@ -136,10 +148,24 @@ module Invoice::Payable
   def record_checkout_payment(session)
     if session.currency != CURRENCY
       report_checkout_error session, CurrencyMismatchError.new("Checkout session currency mismatch")
+    elsif paid? && payments.none?
+      # Paid by a release that kept no ledger; recording this as excess would refund the payment that paid it.
+      report_checkout_error session, UnrecordedPaymentError.new("Paid invoice has no recorded payments")
     else
       record_payment! kind: :checkout, amount: session.amount_total, stripe_payment_intent_id: session.payment_intent,
         stripe_checkout_session_id: session.id
     end
+  end
+
+  # A Checkout payment can succeed while its webhook is still being retried. It
+  # paid the invoice, so it goes in before a manual payment can make it excess.
+  def apply_paid_stored_checkout
+    return if stripe_checkout_session_id.blank?
+
+    session = Stripe::Checkout::Session.retrieve stripe_checkout_session_id
+    apply_checkout_session session if session.status == "complete" && session.payment_status == "paid"
+  rescue Stripe::StripeError => e
+    Rails.error.report e, context: { invoice_id: id, session_id: stripe_checkout_session_id }
   end
 
   def report_checkout_error(session, error)
@@ -158,14 +184,12 @@ module Invoice::Payable
     update! stripe_checkout_session_id: nil if sent? && session.id == stripe_checkout_session_id
   end
 
-  # Money that has arrived is recorded whatever the invoice still owed; only what
-  # it owed is kept, and the rest waits on the row to be refunded.
   def record_payment!(kind:, amount:, paid_on: Date.current, stripe_payment_intent_id: nil, stripe_checkout_session_id: nil)
     raise Invoice::InvalidStatusError, "Invoice must be sent to record a payment" unless sent? || paid?
     return :unchanged if stripe_payment_intent_id && payments.exists?(stripe_payment_intent_id:)
 
     kept = [ amount, amount_due ].min
-    payments.create!(kind:, amount: kept, excess_amount: amount - kept, stripe_payment_intent_id:)
+    payments.create!(kind:, amount: kept, excess_amount: amount - kept, paid_on:, stripe_payment_intent_id:)
     # A cache of the ledger, so it is written in the same transaction.
     self.paid_amount = payments.succeeded.sum(:amount)
 
@@ -211,7 +235,7 @@ module Invoice::Payable
   # The API can only refund a cash balance payment to the client's bank, and Stripe
   # emails them for its details.
   def refund_excess!
-    payments.where(excess_amount: 1.., stripe_refund_id: nil).find_each do |payment|
+    payments.awaiting_refund.find_each do |payment|
       intent = Stripe::PaymentIntent.retrieve id: payment.stripe_payment_intent_id, expand: [ "payment_method" ]
       params = { payment_intent: intent.id, amount: payment.excess_amount }
       params[:instructions_email] = client.email if intent.payment_method.type == "customer_balance"

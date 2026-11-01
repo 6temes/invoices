@@ -172,7 +172,7 @@ class InvoicesController < ApplicationController
       return
     end
 
-    if @invoice.update paid_on: params[:paid_on]
+    if @invoice.correct_paid_on params[:paid_on]
       redirect_to @invoice, notice: "Payment date updated."
     else
       render :payment, status: :unprocessable_entity

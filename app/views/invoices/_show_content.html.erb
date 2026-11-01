@@ -125,7 +125,8 @@
   <% end %>
 </div>
 
-<% if invoice.payments.any? %>
+<% payments = invoice.payments.order(:paid_on, :id).load -%>
+<% if payments.any? %>
   <div class="card mt-2" id="payments">
     <table>
       <thead>
@@ -136,10 +137,10 @@
         </tr>
       </thead>
       <tbody>
-        <% invoice.payments.order(:created_at).each do |payment| %>
+        <% payments.each do |payment| %>
           <tr>
             <td><%= t("invoice.payment_kinds.#{payment.kind}") %></td>
-            <td><%= l payment.created_at.to_date %></td>
+            <td><%= l payment.paid_on %></td>
             <td class="text-right currency">¥<%= number_with_delimiter payment.amount %></td>
           </tr>
         <% end %>

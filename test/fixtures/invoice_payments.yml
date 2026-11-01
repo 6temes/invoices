@@ -3,3 +3,4 @@ acme_january_manual:
   kind: manual
   status: succeeded
   amount: 110000
+  paid_on: 2026-02-15

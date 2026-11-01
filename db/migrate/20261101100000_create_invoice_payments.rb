@@ -6,6 +6,7 @@ class CreateInvoicePayments < ActiveRecord::Migration[8.1]
       t.string :status, null: false, default: "succeeded"
       t.integer :amount, null: false
       t.integer :excess_amount, null: false, default: 0
+      t.date :paid_on, null: false
       t.string :stripe_payment_intent_id
       t.string :stripe_refund_id
       t.string :idempotency_key

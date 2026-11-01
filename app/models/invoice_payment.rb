@@ -8,6 +8,10 @@ class InvoicePayment < ApplicationRecord
   enum :kind, %w[ balance checkout credit manual ].index_by(&:itself)
   enum :status, %w[ pending succeeded ].index_by(&:itself)
 
+  attribute :paid_on, default: -> { Date.current }
+
+  scope :awaiting_refund, -> { where(excess_amount: 1.., stripe_refund_id: nil) }
+
   validates :amount, numericality: { greater_than_or_equal_to: 0 }
   validate :only_kept_credit_on_a_draft
 

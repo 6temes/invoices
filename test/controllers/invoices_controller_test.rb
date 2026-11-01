@@ -308,6 +308,7 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to invoice_path(invoice)
     assert_equal Date.new(2026, 3, 10), invoice.reload.paid_on
+    assert_equal Date.new(2026, 3, 10), invoice.payments.sole.paid_on
   end
 
   test "update_payment rejects a non-paid invoice" do

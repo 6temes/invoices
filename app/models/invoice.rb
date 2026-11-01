@@ -8,8 +8,8 @@ class Invoice < ApplicationRecord
   # mailer can read.
   PAYMENT_LINK_VALIDITY = 60.days
 
-  # Still written by the previous release while a deploy overlaps; payments now
-  # hold the PaymentIntent id.
+  # Dropped only once no running container can still write it; the PaymentIntent
+  # id lives on payments.
   self.ignored_columns += %w[ stripe_payment_intent_id ]
 
   has_paper_trail skip: %i[created_at updated_at]

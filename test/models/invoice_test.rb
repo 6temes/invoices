@@ -191,6 +191,15 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal invoice.total, invoice.paid_amount
   end
 
+  test "a backdated manual payment is recorded on the date it was paid" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    invoice.mark_as_paid! paid_on: Date.new(2026, 2, 10)
+
+    assert_equal Date.new(2026, 2, 10), invoice.payments.sole.paid_on
+  end
+
   test "amount_due is what the payments have not covered yet" do
     assert_equal 247_500, invoices(:sakura_january).amount_due
 
@@ -723,6 +732,59 @@ class InvoiceTest < ActiveSupport::TestCase
 
     assert_error_reported(Stripe::InvalidRequestError) { invoice.mark_as_paid! }
     assert invoice.reload.paid?
+  end
+
+  test "marking an invoice paid that Stripe already paid records the Stripe payment, not a manual one" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_paid"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_paid").returns(paid_session(invoice, id: "cs_paid", payment_intent: "pi_paid"))
+    Stripe::Refund.expects(:create).never
+
+    assert_enqueued_emails 1 do
+      invoice.mark_as_paid!
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_paid", payment_intent: "pi_paid")
+    end
+
+    assert invoice.reload.paid?
+    assert_equal [ "checkout", invoice.total ], [ invoice.payments.sole.kind, invoice.paid_amount ]
+  end
+
+  test "a paid session paying while another session is pending releases the pending one" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_other"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_other").returns(checkout_session(id: "cs_other", status: "open"))
+    Stripe::Checkout::Session.expects(:expire).with("cs_other")
+
+    Invoice.apply_checkout_session paid_session(invoice, id: "cs_paying")
+
+    assert invoice.reload.paid?
+  end
+
+  test "a paid session that is the stored one releases nothing" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    invoice.update_columns stripe_checkout_session_id: "cs_paying"
+    Stripe::Checkout::Session.expects(:retrieve).never
+
+    Invoice.apply_checkout_session paid_session(invoice, id: "cs_paying")
+
+    assert invoice.reload.paid?
+  end
+
+  test "a paid session for an invoice paid without recorded payments is reported, not refunded" do
+    invoice = invoices(:sakura_january)
+    attach_deliverables invoice
+    invoice.update_columns status: "paid", paid_on: Date.current, paid_amount: invoice.total
+    Stripe::Refund.expects(:create).never
+
+    assert_error_reported(Invoice::Payable::UnrecordedPaymentError) do
+      Invoice.apply_checkout_session paid_session(invoice)
+    end
+
+    assert_empty invoice.payments
+    assert_equal invoice.total, invoice.reload.paid_amount
   end
 
   test "a completed session still awaiting a delayed payment changes nothing" do

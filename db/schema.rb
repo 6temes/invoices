@@ -181,6 +181,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_100100) do
     t.string "status", default: "succeeded", null: false
     t.integer "amount", null: false
     t.integer "excess_amount", default: 0, null: false
+    t.date "paid_on", null: false
     t.string "stripe_payment_intent_id"
     t.string "stripe_refund_id"
     t.string "idempotency_key"
