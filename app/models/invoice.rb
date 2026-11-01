@@ -8,12 +8,17 @@ class Invoice < ApplicationRecord
   # mailer can read.
   PAYMENT_LINK_VALIDITY = 60.days
 
+  # Still written by the previous release while a deploy overlaps; payments now
+  # hold the PaymentIntent id.
+  self.ignored_columns += %w[ stripe_payment_intent_id ]
+
   has_paper_trail skip: %i[created_at updated_at]
 
   broadcasts_refreshes
 
   belongs_to :client
   has_many :line_items, class_name: "InvoiceLineItem", dependent: :destroy
+  has_many :payments, class_name: "InvoicePayment", dependent: :restrict_with_error
   has_one_attached :pdf
   has_one_attached :ubl_xml
 
@@ -45,7 +50,7 @@ class Invoice < ApplicationRecord
 
   before_create :assign_next_number
 
-  PAYMENT_FIELDS = %w[sent_at status paid_on paid_amount stripe_checkout_session_id stripe_payment_intent_id].freeze
+  PAYMENT_FIELDS = %w[sent_at status paid_on paid_amount stripe_checkout_session_id].freeze
   # Reminder metadata is operational, not invoice content, so it stays editable
   # on frozen (non-draft) invoices — see immutable_when_frozen.
   REMINDER_FIELDS = %w[reminded_at reminders_count].freeze
@@ -65,6 +70,10 @@ class Invoice < ApplicationRecord
     self.subtotal = active_items.sum { _1.amount || 0 }
     self.tax_amount = (subtotal * tax_rate / 100).floor
     self.total = subtotal + tax_amount
+  end
+
+  def amount_due
+    total - paid_amount
   end
 
   def can_send_reminder?

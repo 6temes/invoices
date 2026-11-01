@@ -76,7 +76,7 @@ module Invoice::Payable
   end
 
   def mark_as_paid!(**)
-    with_lock { record_payment!(**) }
+    with_lock { record_payment!(kind: :manual, **) }
     send_receipt
   end
 
@@ -134,7 +134,7 @@ module Invoice::Payable
     elsif session.amount_total != total
       report_checkout_error session, AmountMismatchError.new("Checkout session amount mismatch")
     else
-      record_payment! stripe_checkout_session_id: session.id, stripe_payment_intent_id: session.payment_intent
+      record_payment! kind: :checkout, stripe_checkout_session_id: session.id, stripe_payment_intent_id: session.payment_intent
       :paid
     end
   end
@@ -155,10 +155,11 @@ module Invoice::Payable
     update! stripe_checkout_session_id: nil if sent? && session.id == stripe_checkout_session_id
   end
 
-  def record_payment!(paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
+  def record_payment!(kind:, paid_on: Date.current, stripe_checkout_session_id: nil, stripe_payment_intent_id: nil)
     raise Invoice::InvalidStatusError, "Invoice must be sent to mark as paid" unless sent?
 
-    update! status: :paid, paid_on:, paid_amount: total, stripe_checkout_session_id:, stripe_payment_intent_id:
+    payments.create!(kind:, amount: amount_due, stripe_payment_intent_id:)
+    update! status: :paid, paid_on:, paid_amount: payments.succeeded.sum(:amount), stripe_checkout_session_id:
   end
 
   def report_unrecorded_payment(session)

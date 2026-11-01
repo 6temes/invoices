@@ -1,0 +1,5 @@
+acme_january_manual:
+  invoice: acme_january
+  kind: manual
+  status: succeeded
+  amount: 110000

@@ -191,6 +191,15 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal invoice.total, invoice.paid_amount
   end
 
+  test "amount_due is what the payments have not covered yet" do
+    assert_equal 247_500, invoices(:sakura_january).amount_due
+
+    invoices(:sakura_january).paid_amount = 100_000
+    assert_equal 147_500, invoices(:sakura_january).amount_due
+
+    assert_equal 0, invoices(:acme_january).amount_due
+  end
+
   # --- Reminder tracking ---
 
   test "can_send_reminder? is true only for sent invoices" do
@@ -581,7 +590,7 @@ class InvoiceTest < ActiveSupport::TestCase
     assert invoice.paid?
     assert_equal invoice.total, invoice.paid_amount
     assert_equal "cs_paid", invoice.stripe_checkout_session_id
-    assert_equal "pi_paid", invoice.stripe_payment_intent_id
+    assert_equal "pi_paid", invoice.payments.sole.stripe_payment_intent_id
   end
 
   test "the same paid session applied twice pays once, even from a stale copy" do
@@ -670,7 +679,7 @@ class InvoiceTest < ActiveSupport::TestCase
 
     invoice.reload
     assert invoice.paid?
-    assert_equal "pi_konbini", invoice.stripe_payment_intent_id
+    assert_equal "pi_konbini", invoice.payments.sole.stripe_payment_intent_id
   end
 
   test "a settled payment seen before its completion pays once" do
