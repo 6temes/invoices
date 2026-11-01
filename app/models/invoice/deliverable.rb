@@ -33,7 +33,7 @@ module Invoice::Deliverable
   def deliver!
     raise Invoice::InvalidStatusError, "Invoice must be in preparing status to deliver" unless preparing?
 
-    create_checkout_session! if client.credit_card? && stripe_checkout_session_id.blank?
+    create_checkout_session! if client.stripe? && stripe_checkout_session_id.blank?
 
     html = render_standalone_html
     pdf_binary = CloudflarePdfGateway.render html

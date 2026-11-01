@@ -6,7 +6,7 @@ class InvoiceMailer < ApplicationMailer
 
     I18n.with_locale(invoice.locale) do
       @period = @invoice.localized_billing_period
-      @payment_url = payment_url_for(invoice) if @client.credit_card?
+      @payment_url = payment_url_for(invoice) if @client.stripe?
       @preheader = t("invoice_mailer.send_invoice.preheader",
         number: invoice.invoice_number, period: @period, due_date: invoice.due_date)
 
@@ -37,7 +37,7 @@ class InvoiceMailer < ApplicationMailer
 
     I18n.with_locale(invoice.locale) do
       @period = @invoice.localized_billing_period
-      @payment_url = payment_url_for(invoice) if @client.credit_card?
+      @payment_url = payment_url_for(invoice) if @client.stripe?
       @preheader = t("invoice_mailer.send_reminder.preheader",
         number: invoice.invoice_number, due_date: invoice.due_date)
 

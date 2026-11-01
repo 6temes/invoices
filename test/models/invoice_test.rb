@@ -300,6 +300,21 @@ class InvoiceTest < ActiveSupport::TestCase
     assert invoice.ubl_xml.attached?
   end
 
+  test "deliver! creates a Checkout session for a stripe client" do
+    invoice = invoices(:acme_february_draft)
+    invoice.update! client: clients(:sakura)
+    invoice.prepare_for_delivery!
+    CloudflarePdfGateway.stubs(:render).returns("%PDF-fake-content")
+    InvoiceMailer.stubs(:send_invoice).returns(stub(deliver_later: true))
+    Stripe::Customer.stubs(:retrieve).returns(Stripe::Customer.construct_from(id: "cus_test_sakura123"))
+    Stripe::Checkout::Session.expects(:create).returns(Stripe::Checkout::Session.construct_from(id: "cs_on_delivery"))
+
+    invoice.deliver!
+
+    assert invoice.sent?
+    assert_equal "cs_on_delivery", invoice.reload.stripe_checkout_session_id
+  end
+
   test "deliver! raises InvalidStatusError for non-preparing invoice" do
     invoice = invoices(:sakura_january)
 

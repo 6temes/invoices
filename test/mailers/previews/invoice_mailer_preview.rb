@@ -1,7 +1,7 @@
 # Preview all emails at http://localhost:3000/rails/mailers/invoice_mailer
 #
 # QA surface for the email redesign: renders each of the three emails in both
-# locales (EN via a bank-transfer client, JA via a credit-card client) against
+# locales (EN via a bank-transfer client, JA via a Stripe client) against
 # real development data. Pair with letter_opener for full-delivery checks.
 class InvoiceMailerPreview < ActionMailer::Preview
   # http://localhost:3000/rails/mailers/invoice_mailer/send_invoice_en

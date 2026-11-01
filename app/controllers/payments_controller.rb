@@ -44,7 +44,7 @@ class PaymentsController < ApplicationController
   end
 
   def checkout_pending?
-    @invoice.sent? && @invoice.client.credit_card? && @invoice.checkout_pending?
+    @invoice.sent? && @invoice.client.stripe? && @invoice.checkout_pending?
   rescue Stripe::StripeError => e
     Rails.error.report e, context: { invoice_id: @invoice.id }
     false

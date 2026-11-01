@@ -1,5 +1,5 @@
 <%# locals: (client:, business:, payment_url:) -%>
-<% if client.credit_card? && payment_url.present? -%>
+<% if client.stripe? && payment_url.present? -%>
 <%= t("invoice.pay") %>: <%= payment_url %>
 <%= t("invoice_mailer.shared.pay_note") %>
 <% else -%>

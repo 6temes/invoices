@@ -100,8 +100,8 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_includes email.text_part.decoded, "¥110,000"
   end
 
-  test "send_invoice for a credit_card client shows a payment link and no bank details" do
-    invoice = invoices(:sakura_january) # ja, credit_card
+  test "send_invoice for a stripe client shows a payment link and no bank details" do
+    invoice = invoices(:sakura_january) # ja, stripe
     attach_fake_deliverables invoice
 
     email = InvoiceMailer.send_invoice(invoice)
@@ -147,8 +147,8 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_includes ja.text_part.decoded, "御中"
   end
 
-  test "send_reminder for a credit_card client includes a fresh payment link" do
-    email = InvoiceMailer.send_reminder(invoices(:sakura_january)) # ja, credit_card
+  test "send_reminder for a stripe client includes a fresh payment link" do
+    email = InvoiceMailer.send_reminder(invoices(:sakura_january)) # ja, stripe
 
     assert_includes email.html_part.decoded, "/pay/"
     assert_includes email.text_part.decoded, "/pay/"

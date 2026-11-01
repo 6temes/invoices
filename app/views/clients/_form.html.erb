@@ -33,7 +33,7 @@
     </div>
     <div class="form-group">
       <%= f.label :payment_method %>
-      <%= f.select :payment_method, [["Bank transfer", "bank_transfer"], ["Credit card", "credit_card"]] %>
+      <%= f.select :payment_method, Client.payment_methods.keys.map { [ it.humanize, it ] } %>
     </div>
   </div>
 
