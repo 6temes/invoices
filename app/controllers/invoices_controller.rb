@@ -20,7 +20,7 @@ class InvoicesController < ApplicationController
     respond_to do |format|
       format.turbo_stream if params[:page].present?
       format.html do
-        @total_open = Invoice.open.sum(:total)
+        @total_open = Invoice.open.sum(Arel.sql("total - paid_amount"))
         @total_paid = Invoice.paid.sum(:total)
         @clients = Client.order(:name)
         @chart_data = build_chart_data

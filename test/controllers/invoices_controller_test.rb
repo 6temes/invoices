@@ -12,6 +12,14 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "index open card sums what is still due" do
+    invoices(:sakura_january).update_columns paid_amount: 100_000
+
+    get invoices_path
+
+    assert_select ".summary-card-value", text: "¥257,500"
+  end
+
   test "index filters by client" do
     get invoices_path(client_id: clients(:acme).id)
     assert_response :success
