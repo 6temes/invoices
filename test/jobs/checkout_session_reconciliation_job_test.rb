@@ -10,11 +10,36 @@ class CheckoutSessionReconciliationJobTest < ActiveJob::TestCase
 
   test "a fetched paid session marks the invoice paid and sends one receipt" do
     Stripe::Checkout::Session.stubs(:retrieve).with("cs_paid").returns(session(id: "cs_paid", status: "complete", payment_status: "paid"))
+    Stripe::PaymentIntent.expects(:retrieve).never
 
     assert_enqueued_emails 1 do
       CheckoutSessionReconciliationJob.perform_now "cs_paid"
     end
     assert @invoice.reload.paid?
+  end
+
+  test "a fetched session awaiting a delayed payment leaves the invoice sent" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_konbini").returns(session(id: "cs_konbini", status: "complete", payment_status: "unpaid"))
+    Stripe::PaymentIntent.stubs(:retrieve).with("pi_test").returns(Stripe::PaymentIntent.construct_from(id: "pi_test", status: "requires_action"))
+
+    assert_no_enqueued_emails do
+      CheckoutSessionReconciliationJob.perform_now "cs_konbini"
+    end
+    assert @invoice.reload.sent?
+    assert_equal "cs_konbini", @invoice.stripe_checkout_session_id
+  end
+
+  test "a fetched session whose delayed payment failed clears the matching stored id" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_konbini").returns(session(id: "cs_konbini", status: "complete", payment_status: "unpaid"))
+    Stripe::PaymentIntent.stubs(:retrieve).with("pi_test").returns(Stripe::PaymentIntent.construct_from(id: "pi_test", status: "requires_payment_method"))
+
+    assert_no_enqueued_emails do
+      CheckoutSessionReconciliationJob.perform_now "cs_konbini"
+    end
+    assert @invoice.reload.sent?
+    assert_nil @invoice.stripe_checkout_session_id
   end
 
   test "a fetched expired session clears the matching stored id" do

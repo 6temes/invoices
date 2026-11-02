@@ -92,6 +92,7 @@ class InvoiceMailerTest < ActionMailer::TestCase
 
   test "send_invoice renders the amount as formatted yen live text" do
     invoice = invoices(:acme_january) # total 110000
+    invoice.update_columns status: "sent", paid_amount: 0, paid_on: nil
     attach_fake_deliverables invoice
 
     email = InvoiceMailer.send_invoice(invoice)
@@ -100,8 +101,8 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_includes email.text_part.decoded, "¥110,000"
   end
 
-  test "send_invoice for a credit_card client shows a payment link and no bank details" do
-    invoice = invoices(:sakura_january) # ja, credit_card
+  test "send_invoice for a stripe client shows a payment link and no bank details" do
+    invoice = invoices(:sakura_january) # ja, stripe
     attach_fake_deliverables invoice
 
     email = InvoiceMailer.send_invoice(invoice)
@@ -147,8 +148,8 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_includes ja.text_part.decoded, "御中"
   end
 
-  test "send_reminder for a credit_card client includes a fresh payment link" do
-    email = InvoiceMailer.send_reminder(invoices(:sakura_january)) # ja, credit_card
+  test "send_reminder for a stripe client includes a fresh payment link" do
+    email = InvoiceMailer.send_reminder(invoices(:sakura_january)) # ja, stripe
 
     assert_includes email.html_part.decoded, "/pay/"
     assert_includes email.text_part.decoded, "/pay/"
@@ -175,6 +176,17 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert email.multipart?
     assert_includes email.html_part.decoded, "¥247,500"
     assert_includes email.html_part.decoded, invoice.due_date.to_s
+  end
+
+  test "send_invoice and send_reminder ask only for what is still due, in both locales" do
+    { invoices(:acme_january) => "¥10,000", invoices(:sakura_january) => "¥147,500" }.each do |invoice, remaining|
+      invoice.update_columns status: "sent", paid_amount: invoice.total - remaining.delete("¥,").to_i
+
+      [ InvoiceMailer.send_invoice(invoice), InvoiceMailer.send_reminder(invoice) ].each do |email|
+        assert_includes email.html_part.decoded, remaining, invoice.locale
+        assert_includes email.text_part.decoded, remaining, invoice.locale
+      end
+    end
   end
 
   # --- send_receipt ---

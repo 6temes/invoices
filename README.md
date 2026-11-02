@@ -21,12 +21,12 @@ A single-tenant Rails app that runs the billing for one freelance consultancy in
 
 ## Features
 
-- **Clients** — manage customers with addresses, locale (EN/JA), and payment method (bank transfer or credit card)
+- **Clients** — manage customers with addresses, locale (EN/JA), and payment method (bank transfer or Stripe)
 - **Retainers** — monthly contracts with hours, rates, and automatic invoice line item generation
 - **Extra Hours** — log additional work from the UI or via a Chrome extension, automatically billed on the next invoice
 - **Invoices** — create manually or generate monthly from active retainers; draft → sent → paid workflow
 - **PDF Generation** — renders localized invoice HTML to PDF via Cloudflare Browser Rendering
-- **Stripe Payments** — credit card clients get a Stripe Checkout link; a webhook handles payment confirmation
+- **Stripe Payments** — Stripe clients get a Stripe Checkout link; a webhook handles payment confirmation
 - **Email Delivery** — sends invoices as PDF attachments via Gmail SMTP
 - **Tax Export** — CSV and ZIP (all PDFs) export by calendar year
 - **Chrome Extension** — log hours directly from GitHub issues, matched to clients by repo
@@ -66,7 +66,7 @@ Browser ──Hotwire (Turbo + Stimulus)──► Rails 8.1 (Puma)
 **Domain model**
 
 - **Business** is a singleton (one record), accessed via `Current.business`.
-- **Client** has a locale that sets invoice language and a payment method (bank transfer or credit card).
+- **Client** has a locale that sets invoice language and a payment method (bank transfer or Stripe).
 - **Retainer** is a monthly contract; one active retainer per client.
 - **ExtraHour** records become immutable once billed to an invoice line item.
 - **Invoice** flows draft → sent → paid; non-draft invoices are frozen except payment fields.

@@ -8,5 +8,6 @@ class ListClientsToolTest < ActiveSupport::TestCase
     sakura = clients.find { it["name"] == "桜テクノロジー株式会社" }
     assert_equal "T1234567890123", acme["tax_registration_number"]
     assert_nil sakura["tax_registration_number"]
+    assert_equal "stripe", sakura["payment_method"]
   end
 end

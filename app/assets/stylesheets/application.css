@@ -852,6 +852,11 @@ turbo-frame#address-country-fields[busy] {
   margin: 2rem auto;
 }
 
+.payment-pending {
+  margin-bottom: 0;
+  color: var(--color-text-muted);
+}
+
 /* Left-aligned inside the centred card: these values get transcribed into a
    bank form, and centred label/value pairs are hard to scan digit by digit. */
 .bank-transfer {

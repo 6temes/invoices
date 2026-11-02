@@ -31,7 +31,7 @@ class ClientTest < ActiveSupport::TestCase
 
   test "payment_method enum" do
     assert clients(:acme).bank_transfer?
-    assert clients(:sakura).credit_card?
+    assert clients(:sakura).stripe?
   end
 
   test "active_retainer returns the current retainer" do

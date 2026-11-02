@@ -23,11 +23,11 @@ class UblInvoiceBuilderTest < ActiveSupport::TestCase
     assert_equal "42", doc.at_xpath("//cbc:PaymentMeansCode", ubl_namespaces).text
   end
 
-  test "generates valid XML for credit_card invoice" do
+  test "generates valid XML for stripe invoice" do
     xml = UblInvoiceBuilder.new(@invoice_ja).to_xml
     doc = Nokogiri::XML(xml)
 
-    assert_equal "48", doc.at_xpath("//cbc:PaymentMeansCode", ubl_namespaces).text
+    assert_equal "1", doc.at_xpath("//cbc:PaymentMeansCode", ubl_namespaces).text
     assert_nil doc.at_xpath("//cac:PayeeFinancialAccount", ubl_namespaces)
   end
 
@@ -183,23 +183,26 @@ class UblInvoiceBuilderTest < ActiveSupport::TestCase
     xml = UblInvoiceBuilder.new(@invoice_ja).to_xml
     doc = Nokogiri::XML(xml)
     assert_empty doc.errors
-    assert_equal "48", doc.at_xpath("//cbc:PaymentMeansCode", ubl_namespaces).text
+    assert_equal "1", doc.at_xpath("//cbc:PaymentMeansCode", ubl_namespaces).text
   end
 
   test "validates against external JP PINT validator" do
     skip "External validation — set RUN_EXTERNAL_VALIDATION=1 to enable" unless ENV["RUN_EXTERNAL_VALIDATION"]
 
     WebMock.allow_net_connect!
-    xml = UblInvoiceBuilder.new(@invoice).to_xml
     vesid = "org.peppol.pint.jp:invoice:1.1.2"
 
-    errors = if ENV["PHORM_URL"]
-      validate_with_phorm xml, vesid:
-    else
-      validate_with_helger xml, vesid:
-    end
+    # One invoice per payment means code
+    [ @invoice, @invoice_ja ].each do |invoice|
+      xml = UblInvoiceBuilder.new(invoice).to_xml
+      errors = if ENV["PHORM_URL"]
+        validate_with_phorm xml, vesid:
+      else
+        validate_with_helger xml, vesid:
+      end
 
-    assert_empty errors, "JP PINT validation errors:\n#{errors.join("\n")}"
+      assert_empty errors, "JP PINT validation errors for #{invoice.client.payment_method}:\n#{errors.join("\n")}"
+    end
   ensure
     WebMock.disable_net_connect! allow_localhost: true
   end

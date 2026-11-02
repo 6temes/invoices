@@ -18,6 +18,8 @@ class ClientsControllerTest < ActionDispatch::IntegrationTest
   test "new renders form" do
     get new_client_path
     assert_response :success
+    assert_select "select[name='client[payment_method]'] option", text: "Bank transfer"
+    assert_select "select[name='client[payment_method]'] option[value=stripe]", text: "Stripe"
   end
 
   test "create saves a valid client" do

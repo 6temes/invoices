@@ -13,7 +13,7 @@ class CheckoutSessionReconciliationJob < ApplicationJob
   end
 
   def perform(session_id)
-    Invoice.apply_checkout_session Stripe::Checkout::Session.retrieve(session_id)
+    Invoice.reconcile_checkout_session Stripe::Checkout::Session.retrieve(session_id)
   end
 
   private
