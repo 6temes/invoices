@@ -18,7 +18,7 @@ class InvoicePaymentsSystemTest < ApplicationSystemTestCase
     visit payment_invoice_path(invoice)
     assert_field "Paid on"
 
-    click_button "Confirm payment"
+    accept_confirm("Record ¥#{invoice.total.to_fs(:delimited)} as received?") { click_button "Confirm payment" }
 
     assert_text "PAID"
     assert_text Date.current.to_s

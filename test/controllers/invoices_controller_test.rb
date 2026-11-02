@@ -12,6 +12,14 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "index open card sums what is still due" do
+    invoices(:sakura_january).update_columns paid_amount: 100_000
+
+    get invoices_path
+
+    assert_select ".summary-card-value", text: "¥257,500"
+  end
+
   test "index filters by client" do
     get invoices_path(client_id: clients(:acme).id)
     assert_response :success
@@ -270,9 +278,23 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Send reminder"
   end
 
-  test "payment renders the slideover form for a sent invoice" do
+  test "show lists the payments received and what is still due" do
+    invoice = invoices(:sakura_january)
+    invoice.payments.create! kind: :checkout, amount: 100_000, stripe_payment_intent_id: "pi_part"
+    invoice.update_columns paid_amount: 100_000
+
+    get invoice_path(invoice)
+
+    assert_select "#payments tbody tr", 1
+    assert_select "#payments", text: /¥100,000/
+    assert_select "#payments", text: /¥147,500/
+  end
+
+  test "payment asks to confirm the amount it will record for a sent invoice" do
+    invoices(:sakura_january).update_columns paid_amount: 100_000
     get payment_invoice_path(invoices(:sakura_january))
     assert_response :success
+    assert_select "input[type=submit][data-turbo-confirm*=?]", "¥147,500"
   end
 
   test "payment renders the slideover form for a paid invoice" do
@@ -294,6 +316,7 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to invoice_path(invoice)
     assert_equal Date.new(2026, 3, 10), invoice.reload.paid_on
+    assert_equal Date.new(2026, 3, 10), invoice.payments.sole.paid_on
   end
 
   test "update_payment rejects a non-paid invoice" do

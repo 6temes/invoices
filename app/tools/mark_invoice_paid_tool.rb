@@ -1,6 +1,6 @@
 class MarkInvoicePaidTool < MCP::Tool
   tool_name "mark_invoice_paid"
-  description "Mark a sent invoice as paid on the date the payment arrived. The client is emailed a receipt, as when marking it paid in the app."
+  description "Mark a sent invoice as paid on the date the payment arrived, recording the amount still due as received. The client is emailed a receipt, as when marking it paid in the app."
   input_schema(
     properties: {
       invoice_number: { type: "integer" },
