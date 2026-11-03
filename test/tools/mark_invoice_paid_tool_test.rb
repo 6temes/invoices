@@ -10,7 +10,7 @@ class MarkInvoicePaidToolTest < ActiveSupport::TestCase
     assert_enqueued_email_with InvoiceMailer, :send_receipt, args: [ invoice ] do
       response = mark(146, "2026-02-10")
       assert_not response.error?
-      assert_equal "paid", JSON.parse(response.content.first[:text])["status"]
+      assert_equal [ "paid", 0 ], JSON.parse(response.content.first[:text]).values_at("status", "amount_due")
     end
 
     invoice.reload

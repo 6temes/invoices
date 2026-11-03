@@ -41,6 +41,11 @@ ja:
     extra_hours_generic: "リテイナー超過分の追加開発（%{hours}時間）"
     month_year: "%{year}年%{month}月"
     payments: お支払い
+    payment_kinds:
+      balance: Stripe残高
+      checkout: Stripe決済
+      credit: クレジット
+      manual: 手動記録
     thank_you_title: お支払いありがとうございます
     thank_you_body: "請求書 #%{number} のお支払いを確認いたしました。"
 
