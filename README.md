@@ -78,7 +78,7 @@ A recurring job generates the monthly invoices from active retainers on the 1st 
 `POST /mcp` serves an [MCP](https://modelcontextprotocol.io) server so any MCP client can read invoices, their PDFs and clients:
 
 - `list_invoices` — a year's issued invoices (never drafts), filterable by client and status
-- `get_invoice` — one invoice by number, with its line items and its PDF and UBL as files
+- `get_invoice` — one invoice by number, with its line items, its payments and its PDF and UBL as files
 - `list_clients` — clients with their tax registration numbers
 
 Generate a token with the purpose **Agent** on Business Settings (Chrome extension tokens are refused), then point your MCP client at `/mcp` with the token as a bearer header. For example, with Claude Code:

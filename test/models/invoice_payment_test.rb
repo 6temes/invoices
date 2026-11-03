@@ -24,6 +24,17 @@ class InvoicePaymentTest < ActiveSupport::TestCase
     assert_equal 0, InvoicePayment.count
   end
 
+  test "refund status follows the excess and its refund" do
+    payment = invoices(:sakura_january).payments.build(kind: :checkout, amount: 1_000)
+    assert_nil payment.refund_status
+
+    payment.excess_amount = 5_000
+    assert_equal "awaiting", payment.refund_status
+
+    payment.stripe_refund_id = "re_test"
+    assert_equal "issued", payment.refund_status
+  end
+
   test "a PaymentIntent is recorded once" do
     invoice = invoices(:sakura_january)
     invoice.payments.create! kind: :checkout, amount: 1_000, stripe_payment_intent_id: "pi_once"
