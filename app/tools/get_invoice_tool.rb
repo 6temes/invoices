@@ -1,6 +1,6 @@
 class GetInvoiceTool < MCP::Tool
   tool_name "get_invoice"
-  description "Fetch one issued invoice by invoice number, with its line items, its payments and its PDF and UBL files when attached. A payment's refund_status is \"awaiting\" while its excess has not been refunded and \"issued\" once a refund has been created, which does not mean the client has received it."
+  description "Fetch one issued invoice by invoice number, with its line items, its payments and its PDF and UBL files when attached. A payment's refund_status is null when it has no excess, \"awaiting\" while its excess has not been refunded and \"issued\" once a refund has been created, which does not mean the client has received it."
   input_schema(properties: { invoice_number: { type: "integer" } }, required: [ "invoice_number" ])
   annotations read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: false
 
