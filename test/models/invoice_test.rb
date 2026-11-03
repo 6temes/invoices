@@ -1000,7 +1000,218 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal "cs_open", invoice.stripe_checkout_session_id
   end
 
+  test "a cash balance that covers the invoice pays it at delivery" do
+    invoice = preparing_stripe_invoice
+    stub_cash_balance 300_000
+    Stripe::PaymentIntent.expects(:create)
+      .with(has_entries(amount: 110_000, currency: "jpy", customer: "cus_test_sakura123", confirm: true,
+        payment_method_data: { type: "customer_balance" }), anything)
+      .returns(payment_intent(status: "succeeded", id: "pi_credit"))
+    Stripe::Checkout::Session.expects(:create).never
+    InvoiceMailer.expects(:send_receipt).never
+
+    deliver invoice
+
+    assert invoice.paid?
+    assert_equal Date.current, invoice.paid_on
+    assert_equal 0, invoice.amount_due
+    credit = invoice.payments.credit.sole
+    assert credit.succeeded?
+    assert_equal [ 110_000, "pi_credit" ], [ credit.amount, credit.stripe_payment_intent_id ]
+  end
+
+  test "credit leaves at least the minimum charge due" do
+    invoice = preparing_stripe_invoice
+    stub_cash_balance 109_980
+    Stripe::PaymentIntent.expects(:create).with(has_entry(amount: 109_950), anything)
+      .returns(payment_intent(status: "succeeded", id: "pi_credit"))
+    stub_checkout_session
+
+    deliver invoice
+
+    assert invoice.sent?
+    assert_equal 50, invoice.amount_due
+  end
+
+  test "a balance below the minimum charge draws nothing" do
+    [ 0, 30 ].each do |balance|
+      invoice = preparing_stripe_invoice
+      stub_cash_balance balance
+      Stripe::PaymentIntent.expects(:create).never
+      stub_checkout_session
+
+      deliver invoice
+
+      assert invoice.sent?
+      assert_empty invoice.payments
+      invoice.update_columns status: "draft", sent_at: nil
+      invoice.pdf.detach
+      invoice.ubl_xml.detach
+    end
+  end
+
+  test "full credit on a future-dated invoice is paid on its issue date" do
+    invoice = invoices(:acme_february_draft)
+    invoice.update! client: clients(:sakura), issue_date: Date.current + 10, due_date: Date.current + 40
+    invoice.prepare_for_delivery!
+    stub_cash_balance 300_000
+    Stripe::PaymentIntent.stubs(:create).returns(payment_intent(status: "succeeded", id: "pi_credit"))
+
+    deliver invoice
+
+    assert invoice.paid?
+    assert_equal invoice.issue_date, invoice.paid_on
+  end
+
+  test "a pending credit is replayed with its own amount and key" do
+    invoice = preparing_stripe_invoice
+    pending = invoice.payments.create!(kind: :credit, status: :pending, amount: 40_000, idempotency_key: "invoice-payment-replay")
+    Stripe::Customer.expects(:retrieve).with(id: "cus_test_sakura123", expand: [ "cash_balance" ]).never
+    Stripe::PaymentIntent.expects(:create)
+      .with(has_entries(amount: 40_000, metadata: { invoice_id: invoice.id, invoice_payment_id: pending.id }),
+        { idempotency_key: "invoice-payment-replay" })
+      .returns(payment_intent(status: "succeeded", id: "pi_credit"))
+    stub_checkout_session
+
+    deliver invoice
+
+    assert pending.reload.succeeded?
+    assert_equal 70_000, invoice.amount_due
+  end
+
+  test "a pending credit older than a day is found by listing instead of replayed" do
+    invoice = preparing_stripe_invoice
+    pending = invoice.payments.create!(kind: :credit, status: :pending, amount: 40_000, idempotency_key: "invoice-payment-old")
+    pending.update_columns created_at: 2.days.ago
+    found = Stripe::PaymentIntent.construct_from(id: "pi_found", status: "succeeded", metadata: { invoice_payment_id: pending.id.to_s })
+    other = Stripe::PaymentIntent.construct_from(id: "pi_other", status: "succeeded", metadata: {})
+    Stripe::PaymentIntent.expects(:list).with(has_entries(customer: "cus_test_sakura123", created: { gte: pending.created_at.to_i }))
+      .returns(Stripe::ListObject.construct_from(object: "list", data: [ other, found ], has_more: false))
+    Stripe::PaymentIntent.expects(:create).never
+    stub_checkout_session
+
+    deliver invoice
+
+    assert_equal "pi_found", pending.reload.stripe_payment_intent_id
+    assert pending.succeeded?
+  end
+
+  test "a pending credit older than a day that Stripe never saw starts over" do
+    invoice = preparing_stripe_invoice
+    pending = invoice.payments.create!(kind: :credit, status: :pending, amount: 40_000, idempotency_key: "invoice-payment-lost")
+    pending.update_columns created_at: 2.days.ago
+    Stripe::PaymentIntent.stubs(:list).returns(Stripe::ListObject.construct_from(object: "list", data: [], has_more: false))
+    stub_cash_balance 20_000
+    Stripe::PaymentIntent.expects(:create).with(has_entry(amount: 20_000), anything)
+      .returns(payment_intent(status: "succeeded", id: "pi_credit"))
+    stub_checkout_session
+
+    deliver invoice
+
+    assert_not InvoicePayment.exists?(pending.id)
+    assert_equal 20_000, invoice.payments.credit.sole.amount
+  end
+
+  test "a balance spent since it was read is released and drawn again for less" do
+    invoice = preparing_stripe_invoice
+    stub_cash_balance 100_000, 60_000
+    Stripe::PaymentIntent.expects(:create).with(has_entry(amount: 100_000), anything)
+      .returns(payment_intent(status: "requires_action", id: "pi_short"))
+    Stripe::PaymentIntent.expects(:cancel).with("pi_short")
+    Stripe::PaymentIntent.expects(:create).with(has_entry(amount: 60_000), anything)
+      .returns(payment_intent(status: "succeeded", id: "pi_credit"))
+    stub_checkout_session
+
+    deliver invoice
+
+    assert_equal [ 60_000 ], invoice.payments.map(&:amount)
+    assert_equal 50_000, invoice.amount_due
+  end
+
+  test "retrying a failed delivery keeps the credit it drew" do
+    invoice = failed_invoice_with_credit 50_000
+    invoice.retry_delivery!
+    Stripe::Customer.expects(:retrieve).with(id: "cus_test_sakura123", expand: [ "cash_balance" ]).never
+    Stripe::PaymentIntent.expects(:create).never
+    stub_checkout_session
+
+    deliver invoice
+
+    assert_equal 60_000, invoice.amount_due
+    assert_equal [ 50_000 ], invoice.payments.map(&:amount)
+  end
+
+  test "reverting to draft keeps the credit for the next delivery" do
+    invoice = failed_invoice_with_credit 50_000
+    Stripe::Refund.expects(:create).never
+
+    invoice.revert_to_draft!
+
+    assert invoice.draft?
+    assert_equal 50_000, invoice.payments.credit.sole.amount
+    assert_equal 60_000, invoice.amount_due
+  end
+
+  test "a kept credit above a lowered total refunds the difference" do
+    invoice = failed_invoice_with_credit 110_000
+    invoice.revert_to_draft!
+    invoice.update! line_items_attributes: [ { id: invoice.line_items.first.id, unit_price: 80_000 } ]
+    invoice.prepare_for_delivery!
+    Stripe::PaymentIntent.expects(:create).never
+    stub_payment_method "pi_kept", "customer_balance"
+    Stripe::Refund.expects(:create)
+      .with({ payment_intent: "pi_kept", amount: 22_000, instructions_email: invoice.client.email }, anything)
+      .returns(Stripe::Refund.construct_from(id: "pyr_excess"))
+
+    deliver invoice
+
+    assert invoice.paid?
+    credit = invoice.payments.credit.sole
+    assert_equal [ 88_000, 22_000, "pyr_excess" ], [ credit.amount, credit.excess_amount, credit.stripe_refund_id ]
+  end
+
+  test "a bank transfer client's delivery never reads a cash balance" do
+    invoice = invoices(:acme_february_draft)
+    invoice.prepare_for_delivery!
+    Stripe::Customer.expects(:retrieve).never
+    Stripe::PaymentIntent.expects(:create).never
+
+    deliver invoice
+
+    assert invoice.sent?
+  end
+
   private
+
+  def preparing_stripe_invoice
+    invoices(:acme_february_draft).tap do |invoice|
+      invoice.update! client: clients(:sakura)
+      invoice.prepare_for_delivery!
+    end
+  end
+
+  def failed_invoice_with_credit(amount)
+    preparing_stripe_invoice.tap do |invoice|
+      invoice.payments.create! kind: :credit, amount:, stripe_payment_intent_id: "pi_kept"
+      invoice.update! status: :failed, paid_amount: amount
+    end
+  end
+
+  def stub_cash_balance(*amounts)
+    customers = amounts.map { Stripe::Customer.construct_from(id: "cus_test_sakura123", cash_balance: { available: { jpy: it } }) }
+    Stripe::Customer.stubs(:retrieve).with(id: "cus_test_sakura123", expand: [ "cash_balance" ]).returns(*customers)
+  end
+
+  def stub_checkout_session
+    Stripe::Customer.stubs(:retrieve).with("cus_test_sakura123").returns(Stripe::Customer.construct_from(id: "cus_test_sakura123"))
+    Stripe::Checkout::Session.stubs(:create).returns(Stripe::Checkout::Session.construct_from(id: "cs_on_delivery"))
+  end
+
+  def deliver(invoice)
+    CloudflarePdfGateway.stubs(:render).returns("%PDF-fake-content")
+    InvoiceMailer.stubs(:send_invoice).returns(stub(deliver_later: true))
+    invoice.deliver!
+  end
 
   def checkout_session(**attributes)
     Stripe::Checkout::Session.construct_from(attributes)

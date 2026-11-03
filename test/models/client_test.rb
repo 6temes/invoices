@@ -24,6 +24,20 @@ class ClientTest < ActiveSupport::TestCase
     assert client.errors[:stripe_customer_id].any?
   end
 
+  test "cash_balance reads the customer's available yen" do
+    Stripe::Customer.expects(:retrieve).with(id: "cus_test_sakura123", expand: [ "cash_balance" ])
+      .returns(Stripe::Customer.construct_from(id: "cus_test_sakura123", cash_balance: { available: { jpy: 12_000 } }))
+
+    assert_equal 12_000, clients(:sakura).cash_balance
+  end
+
+  test "cash_balance is zero without a yen balance or a Stripe customer" do
+    Stripe::Customer.stubs(:retrieve).returns(Stripe::Customer.construct_from(id: "cus_test_sakura123", cash_balance: { available: nil }))
+
+    assert_equal 0, clients(:sakura).cash_balance
+    assert_equal 0, clients(:acme).cash_balance
+  end
+
   test "locale enum" do
     assert clients(:acme).en?
     assert clients(:sakura).ja?

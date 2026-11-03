@@ -42,6 +42,13 @@ class Client < ApplicationRecord
     end
   end
 
+  def cash_balance
+    return 0 if stripe_customer_id.blank?
+
+    customer = Stripe::Customer.retrieve id: stripe_customer_id, expand: [ "cash_balance" ]
+    customer.to_hash.dig(:cash_balance, :available, :jpy) || 0
+  end
+
   def active_retainer
     retainers.active.first
   end
