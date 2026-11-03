@@ -40,6 +40,7 @@ en:
     extra_hours_with_desc: "Additional development: %{description} (%{hours}h)"
     extra_hours_generic: "Additional development hours beyond retainer (%{hours}h)"
     month_year: "%{month_name} %{year}"
+    credit_applied: Credit applied
     payments: Payments
     payment_kinds:
       balance: Stripe balance
@@ -57,8 +58,11 @@ en:
     send_invoice:
       subject: "Invoice #%{number}: %{invoice_subject}"
       preheader: "Invoice #%{number} for %{period}, due %{due_date}."
+      preheader_paid: "Invoice #%{number} for %{period}, paid with your credit."
       greeting: "Hi %{client_name},"
       intro: "Here is your invoice for %{invoice_subject}, covering %{period}."
+      credit_applied: "I've applied %{credit} of your credit; %{amount_due} is due."
+      credit_paid: "I've paid this invoice with %{credit} of your credit, so there is nothing to pay."
       attachment_note: "The full invoice is attached as a PDF."
       closing: "Let me know if anything looks wrong."
       signature: "Best regards,"

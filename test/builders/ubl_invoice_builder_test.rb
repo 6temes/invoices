@@ -129,6 +129,29 @@ class UblInvoiceBuilderTest < ActiveSupport::TestCase
     assert_equal "100000", total.at_xpath("cbc:TaxExclusiveAmount", ubl_namespaces).text
     assert_equal "110000", total.at_xpath("cbc:TaxInclusiveAmount", ubl_namespaces).text
     assert_equal "110000", total.at_xpath("cbc:PayableAmount", ubl_namespaces).text
+    assert_nil total.at_xpath("cbc:PrepaidAmount", ubl_namespaces)
+  end
+
+  test "credit drawn at delivery is prepaid and lowers the payable amount" do
+    { 47_500 => "200000", 247_500 => "0" }.each do |credit, payable|
+      @invoice_ja.payments.destroy_all
+      @invoice_ja.payments.create! kind: :credit, amount: credit, stripe_payment_intent_id: "pi_credit"
+
+      total = Nokogiri::XML(UblInvoiceBuilder.new(@invoice_ja).to_xml).at_xpath("//cac:LegalMonetaryTotal", ubl_namespaces)
+
+      assert_equal "247500", total.at_xpath("cbc:TaxInclusiveAmount", ubl_namespaces).text
+      assert_equal credit.to_s, total.at_xpath("cbc:PrepaidAmount", ubl_namespaces).text
+      assert_equal payable, total.at_xpath("cbc:PayableAmount", ubl_namespaces).text
+    end
+  end
+
+  test "a payment that is not credit leaves the payable amount alone" do
+    @invoice_ja.payments.create! kind: :balance, amount: 47_500, stripe_payment_intent_id: "pi_balance"
+
+    total = Nokogiri::XML(UblInvoiceBuilder.new(@invoice_ja).to_xml).at_xpath("//cac:LegalMonetaryTotal", ubl_namespaces)
+
+    assert_nil total.at_xpath("cbc:PrepaidAmount", ubl_namespaces)
+    assert_equal "247500", total.at_xpath("cbc:PayableAmount", ubl_namespaces).text
   end
 
   test "raises Error when client has no address" do
@@ -192,8 +215,13 @@ class UblInvoiceBuilderTest < ActiveSupport::TestCase
     WebMock.allow_net_connect!
     vesid = "org.peppol.pint.jp:invoice:1.1.2"
 
-    # One invoice per payment means code
-    [ @invoice, @invoice_ja ].each do |invoice|
+    credited = invoices(:acme_february_draft)
+    credited.update! client: clients(:sakura)
+    credited.update_columns status: "sent"
+    credited.payments.create! kind: :credit, amount: 47_500, stripe_payment_intent_id: "pi_credit"
+
+    # One invoice per payment means code, and one carrying credit
+    [ @invoice, @invoice_ja, credited ].each do |invoice|
       xml = UblInvoiceBuilder.new(invoice).to_xml
       errors = if ENV["PHORM_URL"]
         validate_with_phorm xml, vesid:

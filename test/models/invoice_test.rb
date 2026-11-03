@@ -600,6 +600,19 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal [ "請求金額", "¥147,500" ], html.css(".grand-total span").map { it.text.strip }
   end
 
+  test "the PDF shows credit applied apart from later payments" do
+    invoice = invoices(:sakura_january)
+    invoice.payments.create! kind: :credit, amount: 47_500, stripe_payment_intent_id: "pi_credit"
+    invoice.update_columns paid_amount: 47_500
+
+    html = Nokogiri::HTML(ApplicationController.render(partial: "invoices/pdf_template", locals: { invoice:, business: businesses(:default) }))
+    rows = html.css(".totals-row").map { it.css("span").map { it.text.strip } }
+
+    assert_includes rows, [ "ご入金残高より充当", "−¥47,500" ]
+    assert_not_includes rows.map(&:first), "お支払い"
+    assert_equal [ "請求金額", "¥200,000" ], html.css(".grand-total span").map { it.text.strip }
+  end
+
   test "create_checkout_session! keeps the session that paid while the new one was being created" do
     invoice = invoices(:sakura_january)
     attach_fake_deliverables invoice

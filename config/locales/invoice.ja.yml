@@ -40,6 +40,7 @@ ja:
     extra_hours_with_desc: "追加開発: %{description}（%{hours}時間）"
     extra_hours_generic: "リテイナー超過分の追加開発（%{hours}時間）"
     month_year: "%{year}年%{month}月"
+    credit_applied: ご入金残高より充当
     payments: お支払い
     payment_kinds:
       balance: Stripe残高
@@ -57,9 +58,12 @@ ja:
     send_invoice:
       subject: "請求書 #%{number}：%{invoice_subject}"
       preheader: "%{period}分のご請求書 #%{number}（お支払い期限：%{due_date}）"
+      preheader_paid: "%{period}分のご請求書 #%{number}（ご入金残高にてお支払い済み）"
       greeting: "%{client_name} 御中"
       opening: いつもお世話になっております。
       intro: "%{period}分の%{invoice_subject}に関するご請求書は下記の通りです。"
+      credit_applied: "お預かりしているご入金残高から%{credit}を充当いたしました。お支払いいただく金額は%{amount_due}です。"
+      credit_paid: "お預かりしているご入金残高から%{credit}を充当いたしましたので、本請求書のお支払いは完了しております。"
       attachment_note: 詳細は添付の請求書（PDF）をご確認ください。
       closing: 引き続きどうぞよろしくお願いいたします。
     send_reminder:

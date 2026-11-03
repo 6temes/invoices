@@ -132,6 +132,12 @@ module Invoice::Payable
     session
   end
 
+  # Only credit drawn at delivery is printed; a payment that arrives later leaves
+  # the issued documents as they were sent.
+  def credit_applied
+    payments.credit.succeeded.sum(:amount)
+  end
+
   # Spends the client's cash balance before the documents are rendered, so they
   # show it. A delivery that already drew credit (a retry, or a reverted draft) reuses it.
   def apply_credit!
