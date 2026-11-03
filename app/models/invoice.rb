@@ -104,8 +104,7 @@ class Invoice < ApplicationRecord
   def paid_on_in_valid_range
     return if paid_on.blank?
 
-    # Credit can pay a future-dated invoice in full when it is sent, before its issue date arrives.
-    errors.add :paid_on, "can't be in the future" if paid_on > [ Date.current, issue_date ].compact.max
+    errors.add :paid_on, "can't be in the future" if paid_on > latest_paid_on
     errors.add :paid_on, "can't be earlier than the issue date" if issue_date && paid_on < issue_date
   end
 

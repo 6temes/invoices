@@ -132,20 +132,17 @@ module Invoice::Payable
     session
   end
 
-  # Only credit drawn at delivery is printed; a payment that arrives later leaves
-  # the issued documents as they were sent.
+  def latest_paid_on
+    [ Date.current, issue_date ].compact.max
+  end
+
   def credit_applied
     payments.credit.succeeded.sum(:amount)
   end
 
-  # Spends the client's cash balance before the documents are rendered, so they
-  # show it. A delivery that already drew credit (a retry, or a reverted draft) reuses it.
   def apply_credit!
-    if payments.credit.succeeded.exists?
-      trim_kept_credit
-    else
-      draw_credit
-    end
+    draw_credit unless payments.credit.succeeded.exists?
+    trim_kept_credit if payments.credit.succeeded.exists?
   end
 
   private
@@ -178,6 +175,11 @@ module Invoice::Payable
     end
   end
 
+  # A cache of the ledger, so it is written in the same transaction.
+  def refresh_paid_amount
+    self.paid_amount = payments.succeeded.sum(:amount)
+  end
+
   # Never leaves less than the minimum charge due, so Checkout can still collect
   # the rest, and never draws less than it, which Stripe would refuse.
   def credit_for(balance)
@@ -198,26 +200,33 @@ module Invoice::Payable
   end
 
   def find_credit_intent(payment)
-    Stripe::PaymentIntent.list(customer: client.stripe_customer_id, created: { gte: payment.created_at.to_i })
+    Stripe::PaymentIntent.list(customer: client.stripe_customer_id, created: { gte: payment.created_at.to_i }, limit: 100)
       .auto_paging_each.find { it.metadata["invoice_payment_id"] == payment.id.to_s }
   end
 
   def keep_credit(payment, intent)
     with_lock do
       payment.update! status: :succeeded, stripe_payment_intent_id: intent.id
-      update! paid_amount: payments.succeeded.sum(:amount)
+      refresh_paid_amount
+      save!
     end
   end
 
-  # A reverted draft's total may have been lowered below the credit it kept.
+  # A total edited since the credit was drawn: the credit gives back what the
+  # total no longer needs, or enough to leave the minimum charge due.
   def trim_kept_credit
     with_lock do
-      excess = payments.succeeded.sum(:amount) - total
+      excess = case amount_due
+      when ...0 then -amount_due
+      when 1...MINIMUM_CHARGE then MINIMUM_CHARGE - amount_due
+      else 0
+      end
       next unless excess.positive?
 
       credit = payments.credit.succeeded.sole
       credit.update! amount: credit.amount - excess, excess_amount: credit.excess_amount + excess
-      update! paid_amount: payments.succeeded.sum(:amount)
+      refresh_paid_amount
+      save!
     end
     refund_excess!
   end
@@ -282,8 +291,7 @@ module Invoice::Payable
 
     kept = [ amount, amount_due ].min
     payments.create!(kind:, amount: kept, excess_amount: amount - kept, paid_on:, stripe_payment_intent_id:)
-    # A cache of the ledger, so it is written in the same transaction.
-    self.paid_amount = payments.succeeded.sum(:amount)
+    refresh_paid_amount
 
     if sent? && amount_due.zero?
       update!(status: :paid, paid_on:, stripe_checkout_session_id:)

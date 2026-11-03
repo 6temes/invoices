@@ -220,7 +220,7 @@ class UblInvoiceBuilderTest < ActiveSupport::TestCase
     credited.update_columns status: "sent"
     credited.payments.create! kind: :credit, amount: 47_500, stripe_payment_intent_id: "pi_credit"
 
-    # One invoice per payment means code, and one carrying credit
+    # One invoice per payment means code
     [ @invoice, @invoice_ja, credited ].each do |invoice|
       xml = UblInvoiceBuilder.new(invoice).to_xml
       errors = if ENV["PHORM_URL"]

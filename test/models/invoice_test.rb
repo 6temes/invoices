@@ -1183,6 +1183,41 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal [ 88_000, 22_000, "pyr_excess" ], [ credit.amount, credit.excess_amount, credit.stripe_refund_id ]
   end
 
+  test "a pending credit replayed after a lowered total refunds the difference" do
+    invoice = preparing_stripe_invoice
+    pending = invoice.payments.create!(kind: :credit, status: :pending, amount: 110_000, idempotency_key: "invoice-payment-lost")
+    invoice.update! status: :failed
+    invoice.revert_to_draft!
+    invoice.update! line_items_attributes: [ { id: invoice.line_items.first.id, unit_price: 80_000 } ]
+    invoice.prepare_for_delivery!
+    Stripe::PaymentIntent.expects(:create).with(has_entry(amount: 110_000), { idempotency_key: "invoice-payment-lost" })
+      .returns(payment_intent(status: "succeeded", id: "pi_kept"))
+    stub_payment_method "pi_kept", "customer_balance"
+    Stripe::Refund.expects(:create).with(has_entries(payment_intent: "pi_kept", amount: 22_000), anything)
+      .returns(Stripe::Refund.construct_from(id: "pyr_excess"))
+
+    deliver invoice
+
+    assert invoice.paid?
+    assert_equal [ 88_000, 22_000 ], [ pending.reload.amount, pending.excess_amount ]
+  end
+
+  test "a kept credit just under a raised total gives back enough to leave the minimum charge" do
+    invoice = failed_invoice_with_credit 87_970
+    invoice.revert_to_draft!
+    invoice.update! line_items_attributes: [ { id: invoice.line_items.first.id, unit_price: 80_000 } ]
+    invoice.prepare_for_delivery!
+    stub_payment_method "pi_kept", "customer_balance"
+    Stripe::Refund.expects(:create).with(has_entries(payment_intent: "pi_kept", amount: 20), anything)
+      .returns(Stripe::Refund.construct_from(id: "pyr_excess"))
+    stub_checkout_session
+
+    deliver invoice
+
+    assert invoice.sent?
+    assert_equal Invoice::MINIMUM_CHARGE, invoice.amount_due
+  end
+
   test "a bank transfer client's delivery never reads a cash balance" do
     invoice = invoices(:acme_february_draft)
     invoice.prepare_for_delivery!

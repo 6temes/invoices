@@ -46,7 +46,7 @@ module Invoice::Deliverable
       pdf.attach io: StringIO.new(pdf_binary), filename: pdf_filename, content_type: "application/pdf"
       ubl_xml.attach io: StringIO.new(xml_string), filename: ubl_filename, content_type: "application/xml"
       if amount_due.zero?
-        update! status: :paid, sent_at: Time.current, paid_on: [ Date.current, issue_date ].max
+        update! status: :paid, sent_at: Time.current, paid_on: latest_paid_on
       else
         update! status: :sent, sent_at: Time.current
       end
