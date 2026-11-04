@@ -69,6 +69,24 @@ class InvoiceMailer < ApplicationMailer
     end
   end
 
+  def send_partial_payment(invoice, pending_payment)
+    @invoice = invoice
+    @business = Business.instance
+    @client = invoice.client
+    @pending_payment = Invoice::PendingPayment.new(**pending_payment)
+
+    I18n.with_locale(invoice.locale) do
+      @preheader = t("invoice_mailer.send_partial_payment.preheader",
+        number: invoice.invoice_number, amount_remaining: view_context.yen(@pending_payment.amount_remaining))
+
+      mail(
+        to: @client.email_with_name,
+        bcc: @business.email,
+        subject: default_i18n_subject(number: invoice.invoice_number, invoice_subject: invoice.subject)
+      )
+    end
+  end
+
   private
 
   def payment_url_for(invoice)

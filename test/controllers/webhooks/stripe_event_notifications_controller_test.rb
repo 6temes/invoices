@@ -26,6 +26,14 @@ class Webhooks::StripeEventNotificationsControllerTest < ActionDispatch::Integra
     end
   end
 
+  test "a signed partially funded notification enqueues reconciliation of its PaymentIntent" do
+    assert_enqueued_with job: PaymentIntentReconciliationJob, args: [ "pi_thin_short" ] do
+      post_notification type: "v1.payment_intent.partially_funded",
+        related_object: { id: "pi_thin_short", type: "payment_intent", url: "/v1/payment_intents/pi_thin_short" }
+    end
+    assert_response :accepted
+  end
+
   test "a notification signed with another secret is rejected" do
     assert_no_enqueued_jobs do
       post_notification type: "v1.checkout.session.completed", secret: "whsec_someone_else"

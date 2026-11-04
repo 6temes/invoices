@@ -1,0 +1,5 @@
+<%# locals: (heading:, rows:) -%>
+<%= heading %>
+<% rows.each do |label_key, value| -%>
+<%= t(label_key) %>: <%= value %>
+<% end -%>

@@ -33,6 +33,12 @@ ja:
     bank_account_number: 口座番号
     pay: お支払いに進む
     payment_error: "お支払い処理中にエラーが発生しました。数分後にもう一度お試しください。"
+    amount_received: ご入金済み
+    still_due: 残額
+    bank_account_types:
+      futsu: 普通
+      toza: 当座
+    transfer_instructions: お振込み方法を確認する
     payment_pending: "この請求書のお支払いは現在お手続き中です。ご入金を確認いたしましたら、領収のご連絡をメールでお送りいたします。"
     retainer_subject: ウェブ開発・保守
     retainer_subject_with_infrastructure: ウェブ開発・保守・サーバーインフラ
@@ -73,6 +79,14 @@ ja:
       opening: いつもお世話になっております。
       intro: "%{period}分のご請求書 #%{number} につきまして、お支払いがまだ確認できておりません。下記ご確認いただけますと幸いです。"
       closing: 行き違いでお支払いお済みの場合は、何卒ご容赦ください。引き続きよろしくお願いいたします。
+    send_partial_payment:
+      subject: "一部ご入金の確認：請求書 #%{number}（%{invoice_subject}）"
+      preheader: "請求書 #%{number} の残額は%{amount_remaining}です。"
+      greeting: "%{client_name} 御中"
+      opening: いつもお世話になっております。
+      intro: "請求書 #%{number} につきまして、%{amount_received}のご入金を確認いたしました。残額は%{amount_remaining}でございます。"
+      transfer_rest: "残額を下記口座へお振込みください："
+      closing: 行き違いでお振込みお済みの場合は、何卒ご容赦ください。引き続きよろしくお願いいたします。
     send_receipt:
       subject: "お支払い確認：請求書 #%{number}（%{invoice_subject}）"
       preheader: "請求書 #%{number} のお支払いを確認いたしました。"

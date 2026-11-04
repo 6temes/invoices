@@ -29,7 +29,22 @@ class InvoiceMailerPreview < ActionMailer::Preview
     InvoiceMailer.send_receipt(paid_invoice("ja"))
   end
 
+  def send_partial_payment_en
+    InvoiceMailer.send_partial_payment(invoice("en"), sample_partial_payment(invoice("en")))
+  end
+
+  def send_partial_payment_ja
+    InvoiceMailer.send_partial_payment(invoice("ja"), sample_partial_payment(invoice("ja")))
+  end
+
   private
+
+  def sample_partial_payment(invoice)
+    { amount_received: invoice.amount_due - 440, amount_remaining: 440,
+      instructions_url: "https://payments.stripe.com/bank_transfers/instructions/test_example",
+      bank_details: { bank_name: "Example Bank", branch_name: "Sample Branch", account_type: "futsu",
+                      account_number: "7654321", account_holder_name: "Example Consulting" } }
+  end
 
   def invoice(locale)
     Invoice.where(locale:).order(id: :desc).first || Invoice.first

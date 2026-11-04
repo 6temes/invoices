@@ -1229,7 +1229,135 @@ class InvoiceTest < ActiveSupport::TestCase
     assert invoice.sent?
   end
 
+  test "create_checkout_session! names the invoice on the PaymentIntent it starts" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    Stripe::Customer.stubs(:retrieve).returns(Stripe::Customer.construct_from(id: "cus_test_sakura123"))
+    Stripe::Checkout::Session.expects(:create)
+      .with { it[:payment_intent_data] == { metadata: { invoice_id: invoice.id } } }
+      .returns(Stripe::Checkout::Session.construct_from(id: "cs_named"))
+
+    invoice.create_checkout_session!
+  end
+
+  test "a short bank transfer emails what arrived and what is still due, once" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    assert_enqueued_email_with InvoiceMailer, :send_partial_payment, args: [ invoice, sample_pending_payment(received: 247_060, remaining: 440) ] do
+      Invoice.notice_partial_payment transfer_intent(remaining: 440)
+    end
+    assert_equal 247_060, invoice.reload.partial_payment_notified_amount
+
+    assert_no_enqueued_emails do
+      Invoice.notice_partial_payment transfer_intent(remaining: 440)
+      Invoice.notice_partial_payment transfer_intent(remaining: 1_000)
+    end
+    assert_equal 247_060, invoice.reload.partial_payment_notified_amount
+    assert invoice.sent?
+  end
+
+  test "a second short transfer emails the new figures" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    Invoice.notice_partial_payment transfer_intent(remaining: 147_500)
+
+    assert_enqueued_email_with InvoiceMailer, :send_partial_payment, args: [ invoice, sample_pending_payment(received: 247_060, remaining: 440) ] do
+      Invoice.notice_partial_payment transfer_intent(remaining: 440)
+    end
+  end
+
+  test "a transfer that is no longer waiting for funds sends no still-due email" do
+    assert_no_enqueued_emails do
+      %w[ succeeded canceled processing ].each do |status|
+        Invoice.notice_partial_payment transfer_intent(remaining: 440, status:)
+      end
+    end
+    assert_equal 0, invoices(:sakura_january).reload.partial_payment_notified_amount
+  end
+
+  test "an invoice that is no longer sent gets no still-due email" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    invoice.update! status: :paid, paid_on: Date.current, paid_amount: invoice.total
+
+    assert_no_enqueued_emails do
+      Invoice.notice_partial_payment transfer_intent(remaining: 440)
+    end
+  end
+
+  test "a transfer from a session that did not name its invoice on the PaymentIntent finds it through the session" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    Stripe::Checkout::Session.stubs(:list).with(payment_intent: "pi_transfer")
+      .returns(Stripe::ListObject.construct_from(data: [ { id: "cs_older", metadata: { invoice_id: invoice.id.to_s } } ]))
+
+    assert_enqueued_email_with InvoiceMailer, :send_partial_payment, args: [ invoice, sample_pending_payment(received: 247_060, remaining: 440) ] do
+      Invoice.notice_partial_payment transfer_intent(remaining: 440, metadata: {})
+    end
+  end
+
+  test "a transfer no invoice is named for is ignored" do
+    Stripe::Checkout::Session.stubs(:list).with(payment_intent: "pi_transfer")
+      .returns(Stripe::ListObject.construct_from(data: []))
+
+    assert_no_error_reported do
+      assert_no_enqueued_emails do
+        Invoice.notice_partial_payment transfer_intent(remaining: 440, metadata: {})
+      end
+    end
+  end
+
+  test "pending_payment shows what a pending bank transfer has received and still needs" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns stripe_checkout_session_id: "cs_transfer"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_transfer").returns(unpaid_session(invoice, id: "cs_transfer", payment_intent: "pi_transfer"))
+    Stripe::PaymentIntent.stubs(:retrieve).with("pi_transfer").returns(transfer_intent(remaining: 440))
+
+    pending = invoice.pending_payment
+
+    assert pending.bank_transfer?
+    assert_equal sample_pending_payment(received: 247_060, remaining: 440), pending.to_h
+  end
+
+  test "pending_payment has no transfer figures for another delayed method" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns stripe_checkout_session_id: "cs_konbini"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_konbini").returns(unpaid_session(invoice, id: "cs_konbini"))
+    Stripe::PaymentIntent.stubs(:retrieve).with("pi_test").returns(payment_intent(status: "requires_action"))
+
+    pending = invoice.pending_payment
+
+    assert pending
+    assert_not pending.bank_transfer?
+  end
+
+  test "pending_payment is nil when nothing is pending" do
+    invoice = invoices(:sakura_january)
+    Stripe::Checkout::Session.expects(:retrieve).never
+
+    assert_nil invoice.pending_payment
+  end
+
   private
+
+  def transfer_intent(remaining:, amount: 247_500, status: "requires_action", id: "pi_transfer",
+                      metadata: { invoice_id: invoices(:sakura_january).id.to_s })
+    Stripe::PaymentIntent.construct_from(id:, status:, amount:, amount_received: 0, metadata:,
+      next_action: { type: "display_bank_transfer_instructions", display_bank_transfer_instructions: {
+        type: "jp_bank_transfer", currency: "jpy", amount_remaining: remaining,
+        hosted_instructions_url: "https://payments.stripe.com/bank_transfers/instructions/test_example",
+        financial_addresses: [ { type: "zengin", supported_networks: [ "zengin" ], zengin: {
+          bank_name: "Example Bank", bank_code: "0000", branch_name: "Sample Branch", branch_code: "001",
+          account_type: "futsu", account_number: "1234567", account_holder_name: "Example Consulting" } } ] } })
+  end
+
+  def sample_pending_payment(received:, remaining:)
+    { amount_received: received, amount_remaining: remaining,
+      instructions_url: "https://payments.stripe.com/bank_transfers/instructions/test_example",
+      bank_details: { bank_name: "Example Bank", branch_name: "Sample Branch", account_type: "futsu",
+                      account_number: "1234567", account_holder_name: "Example Consulting" } }
+  end
 
   def preparing_stripe_invoice
     invoices(:acme_february_draft).tap do |invoice|

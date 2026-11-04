@@ -46,7 +46,7 @@ class Invoice < ApplicationRecord
 
   before_create :assign_next_number
 
-  PAYMENT_FIELDS = %w[sent_at status paid_on paid_amount stripe_checkout_session_id].freeze
+  PAYMENT_FIELDS = %w[sent_at status paid_on paid_amount stripe_checkout_session_id partial_payment_notified_amount].freeze
   # Reminder metadata is operational, not invoice content, so it stays editable
   # on frozen (non-draft) invoices — see immutable_when_frozen.
   REMINDER_FIELDS = %w[reminded_at reminders_count].freeze
