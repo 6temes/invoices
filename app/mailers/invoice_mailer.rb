@@ -74,6 +74,7 @@ class InvoiceMailer < ApplicationMailer
     @business = Business.instance
     @client = invoice.client
     @pending_payment = Invoice::PendingPayment.new(**pending_payment)
+    @payment_url = payment_url_for(invoice)
 
     I18n.with_locale(invoice.locale) do
       @preheader = t("invoice_mailer.send_partial_payment.preheader",

@@ -152,6 +152,7 @@ class InvoiceMailerTest < ActionMailer::TestCase
       assert_includes body, "7654321"
       assert_includes body, "普通"
       assert_includes body, "https://payments.stripe.com/bank_transfers/instructions/test_example"
+      assert_includes body, "/pay/"
       assert_not_includes body, businesses(:default).bank_name
     end
     assert_empty email.attachments

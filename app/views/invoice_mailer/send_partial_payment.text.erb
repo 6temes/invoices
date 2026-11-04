@@ -25,6 +25,7 @@
     } -%>
 
 <%= t("invoice.transfer_instructions") %>: <%= @pending_payment.instructions_url %>
+<%= t(".payment_page") %> <%= @payment_url %>
 
 <%= t(".closing") %>
 <% signature = t(".signature", default: "") -%>
