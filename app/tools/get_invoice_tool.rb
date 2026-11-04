@@ -1,12 +1,12 @@
 class GetInvoiceTool < MCP::Tool
   tool_name "get_invoice"
-  description "Fetch one issued invoice by invoice number, with its line items and its PDF and UBL files when attached."
+  description "Fetch one issued invoice by invoice number, with its line items, its payments and its PDF and UBL files when attached. A payment's refund_status is null when it has no excess, \"awaiting\" while its excess has not been refunded and \"issued\" once a refund has been created, which does not mean the client has received it."
   input_schema(properties: { invoice_number: { type: "integer" } }, required: [ "invoice_number" ])
   annotations read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: false
 
   def self.call(invoice_number:, server_context:)
     invoice = Invoice.issued
-      .includes(:line_items, :client, pdf_attachment: :blob, ubl_xml_attachment: :blob)
+      .includes(:line_items, :client, :payments, pdf_attachment: :blob, ubl_xml_attachment: :blob)
       .find_by(invoice_number:)
     return MCP::Tool::Response.new([ { type: "text", text: "Invoice #{invoice_number} not found" } ], error: true) unless invoice
 
@@ -18,11 +18,16 @@ class GetInvoiceTool < MCP::Tool
     invoice.slice(*ListInvoicesTool::INVOICE_FIELDS).merge(
       "client" => invoice.client.slice("id", "name", "tax_registration_number"),
       "line_items" => invoice.line_items.map { it.slice("item_type", "description", "quantity", "unit_price", "amount", "origin") },
+      "payments" => invoice.payments.sort_by { [ it.paid_on, it.id ] }.map { payment(it) },
       "files" => {
         "pdf" => { "attached" => invoice.pdf.attached?, "filename" => invoice.pdf.filename&.to_s },
         "ubl_xml" => { "attached" => invoice.ubl_xml.attached?, "filename" => invoice.ubl_xml.filename&.to_s }
       }
     )
+  end
+
+  def self.payment(payment)
+    payment.slice("kind", "status", "amount", "excess_amount", "paid_on").merge("refund_status" => payment.refund_status)
   end
 
   # Tool::Response#to_h leaves content items as objects, and ActiveSupport would serialise
