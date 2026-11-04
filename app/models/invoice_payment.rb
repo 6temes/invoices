@@ -15,6 +15,14 @@ class InvoicePayment < ApplicationRecord
   validates :amount, numericality: { greater_than_or_equal_to: 0 }
   validate :only_kept_credit_on_a_draft
 
+  # "issued" means Stripe accepted the refund, not that the client has it: a cash
+  # balance refund still waits for the client's bank details.
+  def refund_status
+    if excess_amount.positive?
+      stripe_refund_id ? "issued" : "awaiting"
+    end
+  end
+
   private
 
   # Reverting a failed delivery keeps its credit: Stripe can only refund a cash
