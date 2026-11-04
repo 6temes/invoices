@@ -10,6 +10,7 @@ This repository is public under the MIT license and is meant to be read as a ref
 
 - Use fake data only: example names, `example.com` addresses, placeholder bank and tax numbers.
 - Never commit secrets, API keys, tokens or real customer data. Credentials live in encrypted Rails credentials and deploy secrets, never in plain text.
+- Only production has credentials: `config/credentials/production.yml.enc`, decrypted by `RAILS_MASTER_KEY` in the deploy. There is no root `config/credentials.yml.enc`, so development and test run without any, like CI; code that reads credentials needs a dev/test fallback (see `config/initializers/stripe.rb`). Don't add a root credentials file holding live keys.
 - Keep code, copy and docs about the product itself. Don't describe anyone's personal setup, accounting workflow or local machine.
 - Write for an outside reader. Names and comments should make sense to someone who has only the repo.
 

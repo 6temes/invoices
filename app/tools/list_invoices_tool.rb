@@ -1,5 +1,5 @@
 class ListInvoicesTool < MCP::Tool
-  INVOICE_FIELDS = %w[ id invoice_number issue_date due_date billing_month status subtotal tax_rate tax_amount total paid_on paid_amount ]
+  INVOICE_FIELDS = %w[ id invoice_number issue_date due_date billing_month status subtotal tax_rate tax_amount total paid_on paid_amount amount_due ]
 
   tool_name "list_invoices"
   description "List a year's issued invoices (never drafts), ordered by issue date. Filter by client or status."

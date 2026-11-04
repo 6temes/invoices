@@ -20,7 +20,7 @@ class InvoicesController < ApplicationController
     respond_to do |format|
       format.turbo_stream if params[:page].present?
       format.html do
-        @total_open = Invoice.open.sum(:total)
+        @total_open = Invoice.open.sum(:total) - Invoice.open.sum(:paid_amount)
         @total_paid = Invoice.paid.sum(:total)
         @clients = Client.order(:name)
         @chart_data = build_chart_data
@@ -172,7 +172,7 @@ class InvoicesController < ApplicationController
       return
     end
 
-    if @invoice.update paid_on: params[:paid_on]
+    if @invoice.correct_paid_on params[:paid_on]
       redirect_to @invoice, notice: "Payment date updated."
     else
       render :payment, status: :unprocessable_entity

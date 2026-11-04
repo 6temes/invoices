@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_01_100100) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.integer "blob_id", null: false
     t.datetime "created_at", null: false
@@ -175,6 +175,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_090000) do
     t.index ["invoice_id"], name: "index_invoice_line_items_on_invoice_id"
   end
 
+  create_table "invoice_payments", force: :cascade do |t|
+    t.integer "invoice_id", null: false
+    t.string "kind", null: false
+    t.string "status", default: "succeeded", null: false
+    t.integer "amount", null: false
+    t.integer "excess_amount", default: 0, null: false
+    t.date "paid_on", null: false
+    t.string "stripe_payment_intent_id"
+    t.string "stripe_refund_id"
+    t.string "idempotency_key"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["idempotency_key"], name: "index_invoice_payments_on_idempotency_key", unique: true
+    t.index ["invoice_id"], name: "index_invoice_payments_on_invoice_id"
+    t.index ["stripe_payment_intent_id"], name: "index_invoice_payments_on_stripe_payment_intent_id", unique: true
+    t.check_constraint "amount >= 0 AND excess_amount >= 0", name: "invoice_payments_amounts_not_negative"
+  end
+
   create_table "invoices", force: :cascade do |t|
     t.date "billing_month"
     t.integer "client_id", null: false
@@ -254,6 +272,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_090000) do
   add_foreign_key "informant_error_groups", "informant_error_groups", column: "duplicate_of_id"
   add_foreign_key "informant_occurrences", "informant_error_groups", column: "error_group_id"
   add_foreign_key "invoice_line_items", "invoices"
+  add_foreign_key "invoice_payments", "invoices"
   add_foreign_key "invoices", "clients"
   add_foreign_key "retainers", "clients"
   add_foreign_key "sessions", "users"
