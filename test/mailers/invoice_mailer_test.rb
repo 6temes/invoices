@@ -116,6 +116,7 @@ class InvoiceMailerTest < ActionMailer::TestCase
 
   test "send_invoice for a bank_transfer client shows bank details and no payment link" do
     invoice = invoices(:acme_january) # en, bank_transfer
+    invoice.update_columns status: "sent", paid_amount: 0
     attach_fake_deliverables invoice
     business = businesses(:default)
 
@@ -186,6 +187,45 @@ class InvoiceMailerTest < ActionMailer::TestCase
         assert_includes email.html_part.decoded, remaining, invoice.locale
         assert_includes email.text_part.decoded, remaining, invoice.locale
       end
+    end
+  end
+
+  test "send_invoice shows the credit applied and asks only for the rest" do
+    invoice = invoices(:sakura_january) # ja, stripe, total 247,500
+    invoice.payments.create! kind: :credit, amount: 47_500, stripe_payment_intent_id: "pi_credit"
+    invoice.update_columns paid_amount: 47_500
+    attach_fake_deliverables invoice
+
+    { "ja" => "充当", "en" => "¥47,500 of your credit; ¥200,000 is due." }.each do |locale, credit_line|
+      invoice.update_columns locale: locale
+      email = InvoiceMailer.send_invoice(invoice)
+
+      [ email.html_part.decoded, email.text_part.decoded ].each do |body|
+        assert_includes body, credit_line, locale
+        assert_includes body, "¥247,500", locale
+        assert_includes body, "/pay/", locale
+        assert_includes body, invoice.due_date.to_s, locale
+      end
+    end
+  end
+
+  test "send_invoice for an invoice credit paid in full says so and asks for nothing" do
+    invoice = invoices(:sakura_january)
+    invoice.payments.create! kind: :credit, amount: 247_500, stripe_payment_intent_id: "pi_credit"
+    invoice.update_columns status: "paid", paid_amount: 247_500, paid_on: invoice.issue_date
+    attach_fake_deliverables invoice
+
+    { "ja" => "お支払いは完了しております", "en" => "this invoice with ¥247,500 of your credit" }.each do |locale, paid_line|
+      invoice.update_columns locale: locale
+      email = InvoiceMailer.send_invoice(invoice)
+
+      [ email.html_part.decoded, email.text_part.decoded ].each do |body|
+        assert_includes body, paid_line, locale
+        assert_not_includes body, "/pay/", locale
+        assert_not_includes body, invoice.due_date.to_s, locale
+        assert_not_includes body, businesses(:default).bank_name, locale
+      end
+      assert_equal 2, email.attachments.size
     end
   end
 

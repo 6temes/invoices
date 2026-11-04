@@ -7,8 +7,12 @@ class InvoiceMailer < ApplicationMailer
     I18n.with_locale(invoice.locale) do
       @period = @invoice.localized_billing_period
       @payment_url = payment_url_for(invoice) if @client.stripe?
-      @preheader = t("invoice_mailer.send_invoice.preheader",
-        number: invoice.invoice_number, period: @period, due_date: invoice.due_date)
+      @credit = invoice.credit_applied
+      @preheader = if invoice.amount_due.zero?
+        t("invoice_mailer.send_invoice.preheader_paid", number: invoice.invoice_number, period: @period)
+      else
+        t("invoice_mailer.send_invoice.preheader", number: invoice.invoice_number, period: @period, due_date: invoice.due_date)
+      end
 
       attachments["invoice_#{invoice.invoice_number}.pdf"] = {
         mime_type: "application/pdf",
