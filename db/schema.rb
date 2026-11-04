@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_100100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_04_042804) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.integer "blob_id", null: false
     t.datetime "created_at", null: false
@@ -134,9 +134,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_100100) do
     t.string "status", default: "unresolved", null: false
     t.integer "total_occurrences", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.string "source", default: "server", null: false
     t.index ["duplicate_of_id"], name: "index_informant_error_groups_on_duplicate_of_id"
     t.index ["error_class"], name: "index_informant_error_groups_on_error_class"
     t.index ["fingerprint"], name: "index_informant_error_groups_on_fingerprint", unique: true
+    t.index ["source", "status"], name: "index_informant_error_groups_on_source_and_status"
     t.index ["status", "last_seen_at"], name: "index_informant_error_groups_on_status_and_last_seen_at"
     t.index ["status", "original_sha"], name: "index_informant_error_groups_on_status_and_original_sha"
     t.index ["status", "resolved_at"], name: "index_informant_error_groups_on_status_and_resolved_at"
@@ -157,9 +159,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_100100) do
     t.json "request_context"
     t.datetime "updated_at", null: false
     t.json "user_context"
+    t.string "failing_request_id"
+    t.string "request_id"
     t.index ["created_at"], name: "index_informant_occurrences_on_created_at"
     t.index ["error_group_id", "created_at"], name: "index_informant_occurrences_on_error_group_id_and_created_at"
     t.index ["error_group_id"], name: "index_informant_occurrences_on_error_group_id"
+    t.index ["failing_request_id"], name: "index_informant_occurrences_on_failing_request_id"
+    t.index ["request_id"], name: "index_informant_occurrences_on_request_id"
   end
 
   create_table "invoice_line_items", force: :cascade do |t|

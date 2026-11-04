@@ -30,4 +30,5 @@ RailsInformant.configure do |config|
 
   # Auto-purge resolved errors after N days (nil = keep forever)
   # config.retention_days = 30
+  config.capture_browser_errors = true
 end
