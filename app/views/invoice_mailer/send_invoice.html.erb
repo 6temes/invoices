@@ -8,15 +8,22 @@
 <p class="t-strong" style="<%= greeting_style %>"><%= t(".greeting", client_name: @client.name) %></p>
 <% if opening.present? %><p class="t-body" style="<%= p_style %>"><%= opening %></p><% end %>
 <p class="t-body" style="<%= p_style %>"><%= t(".intro", invoice_subject: @invoice.subject, period: @period) %></p>
+<% if @credit.positive? %>
+  <p class="t-body" style="<%= p_style %>"><%= @invoice.amount_due.zero? ? t(".credit_paid", credit: yen(@credit)) : t(".credit_applied", credit: yen(@credit), amount_due: yen(@invoice.amount_due)) %></p>
+<% end %>
 
 <%= render "amount_summary",
       number: @invoice.invoice_number,
       amount: @invoice.amount_due,
       amount_label: t("invoice.amount_due"),
       date_label: t("invoice.due_date"),
-      date: @invoice.due_date %>
+      date: (@invoice.due_date if @invoice.amount_due.positive?),
+      total: @invoice.total,
+      credit: @credit %>
 
-<%= render "payment_action", client: @client, business: @business, payment_url: @payment_url %>
+<% if @invoice.amount_due.positive? %>
+  <%= render "payment_action", client: @client, business: @business, payment_url: @payment_url %>
+<% end %>
 
 <p class="t-muted" style="margin:0 0 16px 0; font-family:<%= font %>; font-size:14px; line-height:1.6; color:#6b7280;"><%= t(".attachment_note") %></p>
 <p class="t-body" style="<%= p_style %>"><%= t(".closing") %></p>

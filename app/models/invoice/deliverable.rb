@@ -33,7 +33,10 @@ module Invoice::Deliverable
   def deliver!
     raise Invoice::InvalidStatusError, "Invoice must be in preparing status to deliver" unless preparing?
 
-    create_checkout_session! if client.stripe? && stripe_checkout_session_id.blank?
+    if client.stripe?
+      apply_credit!
+      create_checkout_session! if amount_due.positive? && stripe_checkout_session_id.blank?
+    end
 
     html = render_standalone_html
     pdf_binary = CloudflarePdfGateway.render html
@@ -42,7 +45,11 @@ module Invoice::Deliverable
     transaction do
       pdf.attach io: StringIO.new(pdf_binary), filename: pdf_filename, content_type: "application/pdf"
       ubl_xml.attach io: StringIO.new(xml_string), filename: ubl_filename, content_type: "application/xml"
-      update! status: :sent, sent_at: Time.current
+      if amount_due.zero?
+        update! status: :paid, sent_at: Time.current, paid_on: latest_paid_on
+      else
+        update! status: :sent, sent_at: Time.current
+      end
     end
 
     InvoiceMailer.send_invoice(self).deliver_later

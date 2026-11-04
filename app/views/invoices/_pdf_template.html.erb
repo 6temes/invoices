@@ -471,10 +471,17 @@
         <span class="label"><%= t("invoice.tax", rate: invoice.tax_rate.to_i) %></span>
         <span class="value num">¥<%= number_with_delimiter invoice.tax_amount %></span>
       </div>
-      <% if invoice.paid_amount.positive? %>
+      <% credit = invoice.credit_applied %>
+      <% if credit.positive? %>
+        <div class="totals-row">
+          <span class="label"><%= t("invoice.credit_applied") %></span>
+          <span class="value num">−¥<%= number_with_delimiter credit %></span>
+        </div>
+      <% end %>
+      <% if invoice.paid_amount > credit %>
         <div class="totals-row">
           <span class="label"><%= t("invoice.payments") %></span>
-          <span class="value num">−¥<%= number_with_delimiter invoice.paid_amount %></span>
+          <span class="value num">−¥<%= number_with_delimiter invoice.paid_amount - credit %></span>
         </div>
       <% end %>
       <div class="grand-total <%= "is-paid" if invoice.paid? %>">

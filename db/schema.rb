@@ -215,7 +215,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_04_042804) do
     t.datetime "sent_at"
     t.string "status", default: "draft", null: false
     t.string "stripe_checkout_session_id"
-    t.string "stripe_payment_intent_id"
     t.integer "subtotal", default: 0, null: false
     t.integer "tax_amount", default: 0, null: false
     t.decimal "tax_rate", precision: 5, scale: 2, null: false

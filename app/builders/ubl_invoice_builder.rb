@@ -189,7 +189,9 @@ class UblInvoiceBuilder
       amount_element xml, "LineExtensionAmount", @invoice.subtotal
       amount_element xml, "TaxExclusiveAmount", @invoice.subtotal
       amount_element xml, "TaxInclusiveAmount", @invoice.total
-      amount_element xml, "PayableAmount", @invoice.total
+      credit = @invoice.credit_applied
+      amount_element xml, "PrepaidAmount", credit if credit.positive?
+      amount_element xml, "PayableAmount", @invoice.total - credit
     end
   end
 

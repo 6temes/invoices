@@ -9,6 +9,10 @@ module Invoice::Payable
   UnpaidCheckoutError = Class.new(CheckoutError)
 
   CURRENCY = "jpy"
+  # Stripe's smallest JPY charge, for a credit PaymentIntent and for Checkout alike.
+  MINIMUM_CHARGE = 50
+  # How long Stripe honours an idempotency key.
+  IDEMPOTENCY_WINDOW = 24.hours
   FAILED_PAYMENT_INTENT_STATUSES = %w[ requires_payment_method canceled ].freeze
 
   class_methods do
@@ -128,7 +132,104 @@ module Invoice::Payable
     session
   end
 
+  def latest_paid_on
+    [ Date.current, issue_date ].compact.max
+  end
+
+  def credit_applied
+    payments.credit.succeeded.sum(:amount)
+  end
+
+  def apply_credit!
+    draw_credit unless payments.credit.succeeded.exists?
+    trim_kept_credit if payments.credit.succeeded.exists?
+  end
+
   private
+
+  # The row is written before Stripe is asked, so a crash replays the same
+  # amount and key and Stripe answers with the same PaymentIntent.
+  def draw_credit
+    2.times do
+      payment = payments.credit.pending.first || start_credit(client.cash_balance)
+      return unless payment
+
+      intent = payment.created_at.after?(IDEMPOTENCY_WINDOW.ago) ? confirm_credit(payment) : find_credit_intent(payment)
+      return keep_credit(payment, intent) if intent&.status == "succeeded"
+
+      # A balance spent since it was read leaves the intent waiting for a transfer;
+      # cancelling it returns what it took, and the next pass draws what is left.
+      Stripe::PaymentIntent.cancel intent.id if intent&.status == "requires_action"
+      payment.destroy!
+    end
+  end
+
+  def start_credit(balance)
+    amount = credit_for(balance)
+    return if amount.zero?
+
+    with_lock do
+      payments.create!(kind: :credit, status: :pending, amount:).tap do
+        it.update! idempotency_key: "invoice-payment-#{it.id}"
+      end
+    end
+  end
+
+  # A cache of the ledger, so it is written in the same transaction.
+  def refresh_paid_amount
+    self.paid_amount = payments.succeeded.sum(:amount)
+  end
+
+  # Never leaves less than the minimum charge due, so Checkout can still collect
+  # the rest, and never draws less than it, which Stripe would refuse.
+  def credit_for(balance)
+    credit = balance >= amount_due ? amount_due : [ balance, amount_due - MINIMUM_CHARGE ].min
+    credit < MINIMUM_CHARGE ? 0 : credit
+  end
+
+  def confirm_credit(payment)
+    Stripe::PaymentIntent.create({
+      amount: payment.amount,
+      currency: CURRENCY,
+      customer: client.stripe_customer_id,
+      automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+      payment_method_data: { type: "customer_balance" },
+      confirm: true,
+      metadata: { invoice_id: id, invoice_payment_id: payment.id }
+    }, { idempotency_key: payment.idempotency_key })
+  end
+
+  def find_credit_intent(payment)
+    Stripe::PaymentIntent.list(customer: client.stripe_customer_id, created: { gte: payment.created_at.to_i }, limit: 100)
+      .auto_paging_each.find { it.metadata["invoice_payment_id"] == payment.id.to_s }
+  end
+
+  def keep_credit(payment, intent)
+    with_lock do
+      payment.update! status: :succeeded, stripe_payment_intent_id: intent.id
+      refresh_paid_amount
+      save!
+    end
+  end
+
+  # A total edited since the credit was drawn: the credit gives back what the
+  # total no longer needs, or enough to leave the minimum charge due.
+  def trim_kept_credit
+    with_lock do
+      excess = case amount_due
+      when ...0 then -amount_due
+      when 1...MINIMUM_CHARGE then MINIMUM_CHARGE - amount_due
+      else 0
+      end
+      next unless excess.positive?
+
+      credit = payments.credit.succeeded.sole
+      credit.update! amount: credit.amount - excess, excess_amount: credit.excess_amount + excess
+      refresh_paid_amount
+      save!
+    end
+    refund_excess!
+  end
 
   def apply_completed_checkout(session, payment_intent)
     case session.payment_status
@@ -190,8 +291,7 @@ module Invoice::Payable
 
     kept = [ amount, amount_due ].min
     payments.create!(kind:, amount: kept, excess_amount: amount - kept, paid_on:, stripe_payment_intent_id:)
-    # A cache of the ledger, so it is written in the same transaction.
-    self.paid_amount = payments.succeeded.sum(:amount)
+    refresh_paid_amount
 
     if sent? && amount_due.zero?
       update!(status: :paid, paid_on:, stripe_checkout_session_id:)

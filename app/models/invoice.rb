@@ -8,10 +8,6 @@ class Invoice < ApplicationRecord
   # mailer can read.
   PAYMENT_LINK_VALIDITY = 60.days
 
-  # Dropped only once no running container can still write it; the PaymentIntent
-  # id lives on payments.
-  self.ignored_columns += %w[ stripe_payment_intent_id ]
-
   has_paper_trail skip: %i[created_at updated_at]
 
   broadcasts_refreshes
@@ -108,7 +104,7 @@ class Invoice < ApplicationRecord
   def paid_on_in_valid_range
     return if paid_on.blank?
 
-    errors.add :paid_on, "can't be in the future" if paid_on > Date.current
+    errors.add :paid_on, "can't be in the future" if paid_on > latest_paid_on
     errors.add :paid_on, "can't be earlier than the issue date" if issue_date && paid_on < issue_date
   end
 
