@@ -10,7 +10,7 @@ class PaymentsController < ApplicationController
   before_action :set_invoice
 
   def show
-    @checkout_pending = checkout_pending?
+    @pending_payment = pending_payment
     render :thank_you if @invoice.paid?
   end
 
@@ -43,11 +43,11 @@ class PaymentsController < ApplicationController
     render :invalid_link, status: :not_found
   end
 
-  def checkout_pending?
-    @invoice.sent? && @invoice.client.stripe? && @invoice.pending_payment.present?
+  def pending_payment
+    @invoice.pending_payment if @invoice.sent? && @invoice.client.stripe?
   rescue Stripe::StripeError => e
     Rails.error.report e, context: { invoice_id: @invoice.id }
-    false
+    nil
   end
 
   def find_or_create_checkout_session

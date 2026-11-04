@@ -89,6 +89,34 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=submit]", count: 0
   end
 
+  test "show tells a client whose transfer arrived short what is still due and asks for the rest" do
+    stub_pending_transfer remaining: 440
+
+    get public_payment_path(token: @token)
+
+    assert_response :success
+    assert_select ".payment-amount .summary-card-label", text: I18n.t("invoice.still_due", locale: @invoice.locale)
+    assert_select ".payment-amount .summary-card-value", text: "¥440"
+    assert_select ".pending-figures dd", text: "¥247,500"
+    assert_select ".pending-figures dd", text: "¥247,060"
+    assert_select "a[href=?]", "https://payments.stripe.com/bank_transfers/instructions/test_example"
+    assert_select ".payment-pending", text: I18n.t("invoice.payment_partially_received", locale: @invoice.locale)
+    assert_select "input[type=submit]", count: 0
+    assert_select "script", count: 0
+  end
+
+  test "show keeps the in-progress notice while a pending transfer has received nothing" do
+    stub_pending_transfer remaining: 247_500
+
+    get public_payment_path(token: @token)
+
+    assert_select ".payment-amount .summary-card-value", text: "¥247,500"
+    assert_select ".pending-figures dd", text: "¥0"
+    assert_select "a[href=?]", "https://payments.stripe.com/bank_transfers/instructions/test_example"
+    assert_select ".payment-pending", text: I18n.t("invoice.payment_pending", locale: @invoice.locale)
+    assert_select "input[type=submit]", count: 0
+  end
+
   test "show offers the pay button when the pending check fails" do
     @invoice.update_columns stripe_checkout_session_id: "cs_test_konbini"
     Stripe::Checkout::Session.stubs(:retrieve).raises(Stripe::APIConnectionError.new("Connection failed"))
@@ -286,6 +314,18 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def stub_pending_transfer(remaining:)
+    @invoice.update_columns stripe_checkout_session_id: "cs_test_transfer"
+    Stripe::Checkout::Session.stubs(:retrieve).returns(unpaid_session("cs_test_transfer"))
+    Stripe::PaymentIntent.stubs(:retrieve).returns(Stripe::PaymentIntent.construct_from(
+      id: "pi_test_konbini", status: "requires_action", amount: 247_500,
+      next_action: { type: "display_bank_transfer_instructions", display_bank_transfer_instructions: {
+        amount_remaining: remaining, hosted_instructions_url: "https://payments.stripe.com/bank_transfers/instructions/test_example",
+        financial_addresses: [ { type: "zengin", zengin: {
+          bank_name: "Example Bank", branch_name: "Sample Branch", account_type: "futsu",
+          account_number: "7654321", account_holder_name: "Example Consulting" } } ] } }))
+  end
 
   def unpaid_session(id)
     Stripe::Checkout::Session.construct_from(

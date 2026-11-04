@@ -40,6 +40,7 @@ ja:
       toza: 当座
     transfer_instructions: お振込み方法を確認する
     payment_pending: "この請求書のお支払いは現在お手続き中です。ご入金を確認いたしましたら、領収のご連絡をメールでお送りいたします。"
+    payment_partially_received: "お振込みの一部を確認いたしました。残額はお振込み方法のご案内に沿ってお振込みください。"
     retainer_subject: ウェブ開発・保守
     retainer_subject_with_infrastructure: ウェブ開発・保守・サーバーインフラ
     retainer_line: "%{period}分の%{subject}月額リテイナー（%{hours}時間含む）"

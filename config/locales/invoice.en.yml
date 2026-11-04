@@ -40,6 +40,7 @@ en:
       toza: Checking
     transfer_instructions: View the transfer instructions
     payment_pending: "A payment for this invoice is already in progress. I'll send a receipt by email once it arrives."
+    payment_partially_received: "Part of your transfer has arrived. Please send the rest using the transfer instructions."
     retainer_subject: Web development and maintenance
     retainer_subject_with_infrastructure: Web development, maintenance, and server infrastructure
     retainer_line: "Monthly retainer for %{subject}, %{period} (includes %{hours} hours)"
