@@ -44,15 +44,17 @@ module Invoice::Payable
       invoice.apply_checkout_session session, payment_intent:
     end
 
-    # A short bank transfer leaves its PaymentIntent waiting for the rest. Sessions
-    # created before the intent carried the invoice id are found through Checkout.
     def notice_partial_payment(intent)
       return unless intent.status == "requires_action"
 
-      invoice_id = intent.metadata["invoice_id"] ||
-        Stripe::Checkout::Session.list(payment_intent: intent.id).data.first&.metadata&.[]("invoice_id")
+      invoice_id = intent.metadata["invoice_id"] || checkout_session_invoice_id(intent)
       find_by(id: invoice_id)&.notice_partial_payment Invoice::PendingPayment.from(intent)
     end
+
+    def checkout_session_invoice_id(intent)
+      Stripe::Checkout::Session.list(payment_intent: intent.id).data.first&.metadata&.[]("invoice_id")
+    end
+    private :checkout_session_invoice_id
   end
 
   def reconcile_checkout_session(session)

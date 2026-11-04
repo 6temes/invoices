@@ -87,7 +87,8 @@ ja:
       opening: いつもお世話になっております。
       intro: "請求書 #%{number} につきまして、%{amount_received}のご入金を確認いたしました。残額は%{amount_remaining}でございます。"
       transfer_rest: "残額を下記口座へお振込みください："
-      payment_page: "最新のご入金状況はお支払いページでご確認いただけます："
+      payment_page: "最新のご入金状況はお支払いページでご確認いただけます。"
+      payment_page_link: お支払いページを開く
       closing: 行き違いでお振込みお済みの場合は、何卒ご容赦ください。引き続きよろしくお願いいたします。
     send_receipt:
       subject: "お支払い確認：請求書 #%{number}（%{invoice_subject}）"

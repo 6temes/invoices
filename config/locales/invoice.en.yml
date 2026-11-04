@@ -86,7 +86,8 @@ en:
       greeting: "Hi %{client_name},"
       intro: "I've received %{amount_received} for invoice #%{number}, so %{amount_remaining} is still due."
       transfer_rest: "Please transfer the rest to:"
-      payment_page: "The payment page always shows the latest figures:"
+      payment_page: "The payment page always shows the latest figures."
+      payment_page_link: Open the payment page
       closing: "If it is already on its way, please ignore this message."
       signature: "Best regards,"
     send_receipt:

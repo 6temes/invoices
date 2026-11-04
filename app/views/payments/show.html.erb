@@ -34,8 +34,7 @@
     </div>
 
     <% if @pending_payment&.bank_transfer? %>
-      <% notice = @pending_payment.amount_received.positive? ? "invoice.payment_partially_received" : "invoice.payment_pending" %>
-      <p class="payment-pending mt-3"><%= t(notice) %></p>
+      <p class="payment-pending mt-3"><%= t(@pending_payment.partially_received? ? "invoice.payment_partially_received" : "invoice.payment_pending") %></p>
       <p class="mt-1"><%= link_to t("invoice.transfer_instructions"), @pending_payment.instructions_url, target: "_blank", rel: "noopener" %></p>
     <% elsif @pending_payment %>
       <p class="payment-pending mt-3"><%= t("invoice.payment_pending") %></p>

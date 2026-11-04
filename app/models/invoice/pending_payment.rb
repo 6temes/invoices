@@ -1,5 +1,3 @@
-# A delayed payment Stripe is still waiting on. Only a bank transfer carries figures:
-# what has arrived so far, what is still to send, and where to send it.
 Invoice::PendingPayment = Data.define(:amount_received, :amount_remaining, :instructions_url, :bank_details) do
   def self.from(intent)
     instructions = intent["next_action"]&.[]("display_bank_transfer_instructions")
@@ -18,5 +16,9 @@ Invoice::PendingPayment = Data.define(:amount_received, :amount_remaining, :inst
 
   def bank_transfer?
     !amount_remaining.nil?
+  end
+
+  def partially_received?
+    bank_transfer? && amount_received.positive?
   end
 end
