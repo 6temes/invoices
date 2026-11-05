@@ -19,12 +19,16 @@ class CreditRefundsController < ApplicationController
     returned = @client.returnable_credit(shown_balance)
 
     case @client.refund_cash_balance!(shown_balance)
-    when :returned
+    in :returned
       @returned = returned
-    when :nothing_to_return
+    in :started
+      render :started
+    in :nothing_to_return | :changed if repeat_submit?
+      render :started
+    in :nothing_to_return
       @balance = shown_balance
       render :show
-    when :changed
+    in :changed
       @balance = @client.cash_balance
       flash.now[:alert] = t("credit_refund.balance_changed")
       render :show, status: :unprocessable_entity
@@ -40,10 +44,20 @@ class CreditRefundsController < ApplicationController
     @business = Business.instance
   end
 
+  # A return clears the credit the link is keyed on, so a repeat submit of the
+  # same page arrives with a dead link.
   def set_client
     @client = Client.find_by_token_for!(:credit_refund, params[:token])
   rescue ActiveSupport::MessageVerifier::InvalidSignature, ActiveRecord::RecordNotFound
-    render :invalid_link, status: :not_found
+    if action_name == "create" && (@client = Client.find_by_credit_return_receipt(params[:receipt]))
+      use_client_locale { render :started }
+    else
+      render :invalid_link, status: :not_found
+    end
+  end
+
+  def repeat_submit?
+    Client.find_by_credit_return_receipt(params[:receipt]) == @client
   end
 
   def use_client_locale(&)

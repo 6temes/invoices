@@ -98,6 +98,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_05_060000) do
     t.datetime "updated_at", null: false
     t.integer "credit_notified_amount", default: 0, null: false
     t.string "prepaid_return_fee_payment_intent_id"
+    t.datetime "credit_return_started_at"
+    t.datetime "credit_returned_at"
   end
 
   create_table "extra_hours", force: :cascade do |t|

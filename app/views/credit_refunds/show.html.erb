@@ -24,6 +24,7 @@
     <div class="mt-3">
       <%= form_with url: credit_refund_path(params[:token]), method: :post do %>
         <%= hidden_field_tag :balance, @balance %>
+        <%= hidden_field_tag :receipt, @client.credit_return_receipt %>
         <%= submit_tag t("credit_refund.submit", amount: yen(returnable)), class: "btn btn-accent btn-lg" %>
       <% end %>
     </div>

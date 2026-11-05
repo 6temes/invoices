@@ -2,6 +2,8 @@ module Client::CashBalance
   extend ActiveSupport::Concern
 
   CASH_BALANCE_RETURN_FEE = 275
+  # Longer than a return's two Stripe calls take, so only a crashed return outlives it.
+  CREDIT_RETURN_WINDOW = 10.minutes
 
   CashBalanceTransferredError = Class.new(StandardError)
 
@@ -29,11 +31,26 @@ module Client::CashBalance
 
       CashBalanceSettlementJob.perform_later client
     end
+
+    # The client whose credit return began after the page carrying this receipt
+    # was shown, so a repeat submit of that page.
+    def find_by_credit_return_receipt(receipt)
+      id, shown_at = credit_return_receipts.verified(receipt)
+      client = find_by(id:) if id
+      client if client&.returned_credit_since?(Time.zone.at(shown_at))
+    end
+
+    def credit_return_receipts
+      Rails.application.message_verifier(:credit_return_receipt)
+    end
   end
 
   # Settlement waits while Stripe is funding a bank transfer, because Stripe puts
-  # every new yen towards it and the two would compete for the same money.
+  # every new yen towards it and the two would compete for the same money. It
+  # also waits out a credit return, whose fee sits in the balance until charged.
   def settle_cash_balance!
+    return settle_cash_balance_later(wait_until: credit_return_started_at + CREDIT_RETURN_WINDOW) if credit_return_in_flight?
+
     replay_balance_draws
     balance = cash_balance
     return if balance.positive? && awaiting_bank_transfer?
@@ -73,31 +90,42 @@ module Client::CashBalance
   # balance's newest transaction: a double submit replays, while the same amount
   # arriving again later is a new return.
   def refund_cash_balance!(shown_balance)
+    return :started if credit_return_in_flight?
+
     balance = cash_balance
     return :changed unless balance == shown_balance
     returnable = returnable_credit(balance)
     return :nothing_to_return if returnable.zero?
+    return :started unless claim_credit_return
 
-    fee = return_fee
-    key = "#{id}-#{latest_cash_balance_transaction_id}"
-    refund = Stripe::Refund.create(
-      { origin: "customer_balance", customer: stripe_customer_id, amount: returnable, currency: Invoice::Payable::CURRENCY, instructions_email: email },
-      { idempotency_key: "return-#{key}" }
-    )
-
-    if fee.positive?
-      charge_return_fee(fee, refund, key)
-    else
-      # Marked as spent, or cancelling this free return would make the next one free too.
-      Stripe::PaymentIntent.update prepaid_return_fee_payment_intent_id, metadata: { credit_return_waived_for: refund.id }
-      update! prepaid_return_fee_payment_intent_id: nil
+    begin
+      fee = return_fee
+      key = "#{id}-#{latest_cash_balance_transaction_id}"
+      refund = Stripe::Refund.create(
+        { origin: "customer_balance", customer: stripe_customer_id, amount: returnable, currency: Invoice::Payable::CURRENCY, instructions_email: email },
+        { idempotency_key: "return-#{key}" }
+      )
+      update! credit_returned_at: credit_return_started_at, credit_notified_amount: 0
+      settle_return_fee(fee, refund, key)
+    ensure
+      update! credit_return_started_at: nil
     end
-    update! credit_notified_amount: 0
-    :returned
   end
 
-  def settle_cash_balance_later
-    CashBalanceSettlementJob.perform_later self if stripe?
+  def credit_return_in_flight?
+    credit_return_started_at&.after?(CREDIT_RETURN_WINDOW.ago)
+  end
+
+  def returned_credit_since?(time)
+    credit_return_in_flight? || (credit_returned_at.present? && credit_returned_at >= time)
+  end
+
+  def credit_return_receipt
+    self.class.credit_return_receipts.generate [ id, Time.current.to_i ], expires_in: 1.hour
+  end
+
+  def settle_cash_balance_later(wait_until: nil)
+    CashBalanceSettlementJob.set(wait_until:).perform_later self if stripe?
   end
 
   private
@@ -120,10 +148,12 @@ module Client::CashBalance
     Stripe::Customer.list_cash_balance_transactions(stripe_customer_id, limit: 1).data.first.id
   end
 
+  # An exact match goes first; the rest follow oldest first, so an exact match
+  # that takes nothing (a Checkout payment under way) leaves the balance to them.
   def balance_candidates(balance)
     oldest_first = invoices.sent.order(:issue_date, :invoice_number).to_a
     exact = oldest_first.select { it.amount_due == balance }
-    exact.one? ? exact : oldest_first
+    exact.one? ? exact + (oldest_first - exact) : oldest_first
   end
 
   def notice_credit(leftover)
@@ -143,6 +173,31 @@ module Client::CashBalance
 
   def delivery_in_progress?
     invoices.preparing.or(invoices.failed.where(id: InvoicePayment.credit.succeeded.select(:invoice_id))).exists?
+  end
+
+  def claim_credit_return
+    with_lock do
+      next false if credit_return_in_flight?
+
+      update! credit_return_started_at: Time.current
+    end
+  end
+
+  # The refund is under way whatever happens here, so a fee failure is reported
+  # rather than shown to the client as a failed return.
+  def settle_return_fee(fee, refund, key)
+    if fee.positive?
+      charge_return_fee(fee, refund, key)
+    else
+      # Marked as spent, or cancelling this free return would make the next one free too.
+      prepaid = prepaid_return_fee_payment_intent_id
+      update! prepaid_return_fee_payment_intent_id: nil
+      Stripe::PaymentIntent.update prepaid, metadata: { credit_return_waived_for: refund.id }
+    end
+    :returned
+  rescue Stripe::StripeError => e
+    Rails.error.report e, severity: :error, context: { client_id: id, refund_id: refund.id, fee: }
+    :started
   end
 
   def charge_return_fee(fee, refund, key)

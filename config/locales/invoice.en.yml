@@ -70,6 +70,7 @@ en:
     balance_changed: "Your credit has changed since this page was opened. Please check the new amount."
     returned_title: Return requested
     returned_body: "Stripe will email %{email} to ask for your bank details and sends the money once you reply."
+    started_title: Your return is under way
 
   invoice_mailer:
     footer:

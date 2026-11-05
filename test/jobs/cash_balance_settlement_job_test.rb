@@ -107,6 +107,19 @@ class CashBalanceSettlementJobTest < ActiveJob::TestCase
     assert @newer.reload.paid?
   end
 
+  test "an exact match waiting on a Checkout payment leaves the balance to the oldest invoice" do
+    @newer.update_columns stripe_checkout_session_id: "cs_complete"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_complete")
+      .returns(Stripe::Checkout::Session.construct_from(id: "cs_complete", status: "complete"))
+    stub_cash_balance 110_000, 0
+    stub_draws 110_000
+
+    perform
+
+    assert_equal 110_000, @older.reload.paid_amount
+    assert_equal 0, @newer.reload.paid_amount
+  end
+
   test "a balance too small to charge leaves an open Checkout session alone" do
     @older.update_columns stripe_checkout_session_id: "cs_open"
     Stripe::Checkout::Session.expects(:retrieve).never
@@ -142,6 +155,24 @@ class CashBalanceSettlementJobTest < ActiveJob::TestCase
     stub_cash_balance 10_000
 
     assert_no_enqueued_emails { perform }
+  end
+
+  test "a credit return under way holds settlement off until it can no longer be running" do
+    @client.update! credit_return_started_at: 1.minute.ago
+    Stripe::Customer.expects(:retrieve).never
+    Stripe::PaymentIntent.expects(:create).never
+
+    assert_enqueued_with(job: CashBalanceSettlementJob, at: @client.credit_return_started_at + Client::CREDIT_RETURN_WINDOW) do
+      assert_no_enqueued_emails { perform }
+    end
+  end
+
+  test "a draw already under way stands aside once a credit return starts" do
+    Client.find(@client.id).update! credit_return_started_at: Time.current
+    Stripe::PaymentIntent.expects(:create).never
+
+    assert_equal 0, @older.apply_balance!(300_000)
+    assert_empty @older.payments.balance
   end
 
   test "a draw interrupted before it was recorded is replayed, though Stripe already took the balance" do

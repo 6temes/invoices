@@ -70,6 +70,7 @@ ja:
     balance_changed: このページを開いた後にクレジット残高が変わりました。新しい金額をご確認ください。
     returned_title: ご返金を承りました
     returned_body: "Stripeより%{email}宛てに口座情報をお伺いするメールをお送りいたします。ご返信いただき次第、ご返金いたします。"
+    started_title: ご返金のお手続きを開始いたしました
 
   invoice_mailer:
     footer:

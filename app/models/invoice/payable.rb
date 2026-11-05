@@ -214,10 +214,11 @@ module Invoice::Payable
   end
 
   # Sized on the locked row: the invoice may have been paid since it was loaded.
+  # A credit return under way holds its fee in the balance until it is charged.
   def start_credit(balance, kind:)
     with_lock do
       amount = credit_for(balance)
-      next if amount.zero?
+      next if amount.zero? || Client.find(client_id).credit_return_in_flight?
 
       payments.create!(kind:, status: :pending, amount:).tap do
         it.update! idempotency_key: "invoice-payment-#{it.id}"

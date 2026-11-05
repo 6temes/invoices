@@ -165,6 +165,67 @@ class ClientTest < ActiveSupport::TestCase
     assert_equal :returned, clients(:sakura).refund_cash_balance!(10_000)
   end
 
+  test "a return holds settlement off until it ends, then records when it began" do
+    client = clients(:sakura)
+    stub_cash_balance 10_000
+    Stripe::Refund.expects(:create).with do
+      assert client.reload.credit_return_in_flight?
+      true
+    end.returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.stubs(:create).returns(Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded"))
+
+    freeze_time do
+      client.refund_cash_balance!(10_000)
+
+      assert_not client.reload.credit_return_in_flight?
+      assert_equal Time.current, client.credit_returned_at
+    end
+  end
+
+  test "a second return while one is under way makes no Stripe call" do
+    client = clients(:sakura)
+    client.update! credit_return_started_at: 1.minute.ago
+    Stripe::Customer.expects(:retrieve).never
+    Stripe::Refund.expects(:create).never
+
+    assert_equal :started, client.refund_cash_balance!(10_000)
+  end
+
+  test "a return whose marker outlived a crash no longer holds anything off" do
+    client = clients(:sakura)
+    client.update! credit_return_started_at: (Client::CREDIT_RETURN_WINDOW + 1.minute).ago
+
+    assert_not client.credit_return_in_flight?
+  end
+
+  test "a fee charge that fails after the refund is reported, and the return still stands" do
+    client = clients(:sakura)
+    client.update! credit_notified_amount: 10_000
+    stub_cash_balance 10_000
+    Stripe::Refund.stubs(:create).returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.stubs(:create).raises(Stripe::APIConnectionError.new("timeout"))
+
+    assert_error_reported(Stripe::APIConnectionError) do
+      assert_equal :started, client.refund_cash_balance!(10_000)
+    end
+    assert_equal 0, client.reload.credit_notified_amount
+    assert_not client.credit_return_in_flight?
+  end
+
+  test "a return receipt names the client only once a return began after its page was shown" do
+    client = clients(:sakura)
+    receipt = client.credit_return_receipt
+
+    assert_nil Client.find_by_credit_return_receipt(receipt)
+
+    client.update! credit_returned_at: 1.second.from_now
+    assert_equal client, Client.find_by_credit_return_receipt(receipt)
+
+    client.update! credit_returned_at: 1.hour.ago
+    assert_nil Client.find_by_credit_return_receipt(receipt)
+    assert_nil Client.find_by_credit_return_receipt("forged")
+  end
+
   test "a credit return link stops working once the notified credit changes" do
     client = clients(:sakura)
     client.update! credit_notified_amount: 10_000

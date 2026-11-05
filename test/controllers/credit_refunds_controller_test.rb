@@ -103,6 +103,69 @@ class CreditRefundsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invoice.payment_error", locale: :ja), flash[:alert]
   end
 
+  test "the page carries a receipt for its own repeat submit" do
+    stub_cash_balance 10_000
+
+    get credit_refund_path(@token)
+
+    assert_select "form input[name=receipt]"
+  end
+
+  test "a repeat submit after the return went through says the return is under way" do
+    receipt = @client.credit_return_receipt
+    @client.update! credit_notified_amount: 0, credit_returned_at: 1.second.from_now
+    Stripe::Refund.expects(:create).never
+
+    post credit_refund_path(@token), params: { balance: 10_000, receipt: }
+
+    assert_response :success
+    assert_select "h1", text: "ご返金のお手続きを開始いたしました"
+    assert_match "keiri@sakura.example.jp", response.body
+  end
+
+  test "a repeat submit while the return is under way says so" do
+    @client.update! credit_return_started_at: Time.current
+    Stripe::Refund.expects(:create).never
+
+    post credit_refund_path(@token), params: { balance: 10_000, receipt: @client.credit_return_receipt }
+
+    assert_response :success
+    assert_select "h1", text: "ご返金のお手続きを開始いたしました"
+  end
+
+  test "a repeat submit that finds the balance already returned says the return is under way" do
+    receipt = @client.credit_return_receipt
+    @client.update! credit_returned_at: 1.second.from_now
+    stub_cash_balance 275
+
+    post credit_refund_path(@token), params: { balance: 10_000, receipt: }
+
+    assert_response :success
+    assert_select "h1", text: "ご返金のお手続きを開始いたしました"
+  end
+
+  test "a dead link with no return behind it is still invalid" do
+    receipt = @client.credit_return_receipt
+    @client.update! credit_notified_amount: 4_000
+
+    post credit_refund_path(@token), params: { balance: 10_000, receipt: }
+
+    assert_response :not_found
+  end
+
+  test "a fee charge failure after the refund shows the return as under way" do
+    stub_cash_balance 10_000
+    Stripe::Refund.stubs(:create).returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.stubs(:create).raises(Stripe::APIConnectionError.new("timeout"))
+
+    assert_error_reported(Stripe::APIConnectionError) do
+      post credit_refund_path(@token), params: { balance: 10_000 }
+    end
+
+    assert_response :success
+    assert_select "h1", text: "ご返金のお手続きを開始いたしました"
+  end
+
   test "a submission over the rate limit is turned away without touching Stripe" do
     # The test cache is a null store, so it reports the count a sixth post would reach.
     ActiveSupport::Cache::NullStore.any_instance.stubs(:increment).returns(6)
