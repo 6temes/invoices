@@ -161,7 +161,33 @@ class ClientTest < ActiveSupport::TestCase
     assert_nil Client.find_by_token_for(:credit_refund, token)
   end
 
+  test "a cancelled return makes the next return free" do
+    client = clients(:sakura)
+    stub_fee_charge refund_status: "canceled"
+
+    client.release_return_fee!
+
+    assert_equal "pi_fee", client.reload.prepaid_return_fee_payment_intent_id
+  end
+
+  test "a return still on its way keeps the fee charged" do
+    client = clients(:sakura)
+    stub_fee_charge refund_status: "pending"
+
+    client.release_return_fee!
+
+    assert_nil client.reload.prepaid_return_fee_payment_intent_id
+  end
+
   private
+
+  def stub_fee_charge(refund_status:)
+    fee = Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded", metadata: { credit_return_refund: "rcb_return" })
+    draw = Stripe::PaymentIntent.construct_from(id: "pi_draw", status: "succeeded", metadata: { invoice_id: "1" })
+    Stripe::PaymentIntent.stubs(:list).with(customer: "cus_test_sakura123", limit: 100)
+      .returns(Stripe::ListObject.construct_from(object: "list", data: [ draw, fee ], has_more: false))
+    Stripe::Refund.stubs(:retrieve).with("rcb_return").returns(Stripe::Refund.construct_from(id: "rcb_return", status: refund_status))
+  end
 
   def stub_cash_balance(amount)
     Stripe::Customer.stubs(:retrieve).with(id: "cus_test_sakura123", expand: [ "cash_balance" ])

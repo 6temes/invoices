@@ -169,6 +169,57 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_includes email.text_part.decoded, "Ordinary"
   end
 
+  test "send_partial_payment after credit was applied shows the figures and leaves out the bank details" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns locale: "en", paid_amount: 117_500
+
+    email = InvoiceMailer.send_partial_payment(invoice, { amount_received: 20_000, amount_remaining: 130_000 })
+
+    assert_includes email.text_part.decoded, "I've applied ¥20,000 of your credit"
+    [ email.html_part.decoded, email.text_part.decoded ].each do |body|
+      assert_includes body, "Credit applied"
+      assert_not_includes body, "Received so far"
+      assert_includes body, "¥150,000"
+      assert_includes body, "¥130,000"
+      assert_includes body, "/pay/"
+      assert_not_includes body, "Please transfer the rest"
+      assert_not_includes body, "transfer instructions"
+    end
+  end
+
+  # --- send_credit_notice ---
+
+  test "send_credit_notice offers the return link when the credit covers the fee" do
+    client = clients(:sakura)
+    client.update! credit_notified_amount: 10_000
+
+    email = InvoiceMailer.send_credit_notice(client, 10_000)
+    token = email.text_part.decoded[%r{/credit/(\S+)}, 1]
+
+    assert_equal client, Client.find_by_token_for(:credit_refund, token)
+    assert_equal [ client.email ], email.to
+    assert_includes email.subject, "¥10,000"
+    [ email.html_part.decoded, email.text_part.decoded ].each do |body|
+      assert_includes body, "御中"
+      assert_includes body, "75日"
+      assert_includes body, "¥275"
+      assert_match %r{/credit/[^"\s]+}, body
+    end
+  end
+
+  test "send_credit_notice leaves out the return link when the credit does not cover the fee" do
+    client = clients(:sakura)
+    client.update! locale: "en", credit_notified_amount: 275
+
+    email = InvoiceMailer.send_credit_notice(client, 275)
+
+    assert_includes email.text_part.decoded, "I'm holding ¥275 of your payments as credit"
+    [ email.html_part.decoded, email.text_part.decoded ].each do |body|
+      assert_not_includes body, "/credit/"
+      assert_not_includes body, "returned now"
+    end
+  end
+
   # --- send_reminder ---
 
   test "send_reminder localizes the subject and body per locale" do

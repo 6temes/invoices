@@ -88,6 +88,23 @@ class InvoiceMailer < ApplicationMailer
     end
   end
 
+  def send_credit_notice(client, amount)
+    @client = client
+    @business = Business.instance
+    @amount = amount
+
+    I18n.with_locale(client.locale) do
+      @return_url = credit_refund_url(client.generate_token_for(:credit_refund)) if client.returnable_credit(amount).positive?
+      @preheader = t("invoice_mailer.send_credit_notice.preheader", amount: view_context.yen(amount))
+
+      mail(
+        to: client.email_with_name,
+        bcc: @business.email,
+        subject: default_i18n_subject(amount: view_context.yen(amount))
+      )
+    end
+  end
+
   private
 
   def payment_url_for(invoice)

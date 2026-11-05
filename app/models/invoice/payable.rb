@@ -104,6 +104,7 @@ module Invoice::Payable
     end
 
     settle_payment outcome, pending_session_id: (stored_session_id unless stored_session_id == session.id)
+    settle_cash_balance_later outcome
     outcome
   end
 
@@ -119,6 +120,7 @@ module Invoice::Payable
     end
 
     settle_payment outcome, pending_session_id: stored_session_id
+    settle_cash_balance_later outcome
   end
 
   # The payment that settled the invoice carries the same date, so a correction moves both.
@@ -173,13 +175,32 @@ module Invoice::Payable
     trim_kept_credit if payments.credit.succeeded.exists?
   end
 
+  # Spends cash balance no pending payment needs, and returns what it took. A
+  # pending draw is replayed first: Stripe may already have taken its amount.
+  def apply_balance!(balance)
+    raise Invoice::InvalidStatusError, "Invoice must be sent to apply a balance" unless sent?
+
+    unless payments.balance.pending.exists?
+      return 0 if credit_for(balance).zero? || !release_checkout_for_balance
+    end
+
+    due = amount_due
+    outcome = draw_credit(kind: :balance, balance:)
+    settle_payment outcome, pending_session_id: nil
+    if outcome == :recorded
+      InvoiceMailer.send_partial_payment(self, { amount_received: due - amount_due, amount_remaining: amount_due }).deliver_later
+    end
+    due - amount_due
+  end
+
   private
 
   # The row is written before Stripe is asked, so a crash replays the same
   # amount and key and Stripe answers with the same PaymentIntent.
-  def draw_credit
+  def draw_credit(kind: :credit, balance: nil)
     2.times do
-      payment = payments.credit.pending.first || start_credit(client.cash_balance)
+      payment = payments.where(kind:).pending.first || start_credit(balance || client.cash_balance, kind:)
+      balance = nil
       return unless payment
 
       intent = payment.created_at.after?(IDEMPOTENCY_WINDOW.ago) ? confirm_credit(payment) : find_credit_intent(payment)
@@ -192,12 +213,12 @@ module Invoice::Payable
     end
   end
 
-  def start_credit(balance)
+  def start_credit(balance, kind:)
     amount = credit_for(balance)
     return if amount.zero?
 
     with_lock do
-      payments.create!(kind: :credit, status: :pending, amount:).tap do
+      payments.create!(kind:, status: :pending, amount:).tap do
         it.update! idempotency_key: "invoice-payment-#{it.id}"
       end
     end
@@ -236,8 +257,21 @@ module Invoice::Payable
     with_lock do
       payment.update! status: :succeeded, stripe_payment_intent_id: intent.id
       refresh_paid_amount
-      save!
+      mark_paid_when_covered paid_on: latest_paid_on
     end
+  end
+
+  # A complete session has a payment under way, so the invoice waits for it. An
+  # open one would let the client pay what the balance is about to cover.
+  def release_checkout_for_balance
+    return true if stripe_checkout_session_id.blank?
+
+    session = Stripe::Checkout::Session.retrieve stripe_checkout_session_id
+    return false if session.status == "complete"
+
+    Stripe::Checkout::Session.expire session.id if session.status == "open"
+    with_lock { forget_checkout_session session }
+    true
   end
 
   # A total edited since the credit was drawn: the credit gives back what the
@@ -320,9 +354,12 @@ module Invoice::Payable
     kept = [ amount, amount_due ].min
     payments.create!(kind:, amount: kept, excess_amount: amount - kept, paid_on:, stripe_payment_intent_id:)
     refresh_paid_amount
+    mark_paid_when_covered paid_on:, stripe_checkout_session_id:
+  end
 
+  def mark_paid_when_covered(**attributes)
     if sent? && amount_due.zero?
-      update!(status: :paid, paid_on:, stripe_checkout_session_id:)
+      update!(status: :paid, **attributes)
       :paid
     else
       save!
@@ -339,6 +376,11 @@ module Invoice::Payable
       release_pending_checkout pending_session_id if pending_session_id
     end
     refund_excess!
+  end
+
+  # Paying by another route can leave cash balance that nothing waits for any more.
+  def settle_cash_balance_later(outcome)
+    CashBalanceSettlementJob.perform_later client if client.stripe? && outcome.in?(%i[ paid recorded ])
   end
 
   def send_receipt

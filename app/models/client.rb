@@ -3,6 +3,8 @@ class Client < ApplicationRecord
   # the return page read it from here, so a wrong figure is corrected once.
   CASH_BALANCE_RETURN_FEE = 275
 
+  CashBalanceTransferredError = Class.new(StandardError)
+
   has_paper_trail skip: %i[created_at updated_at]
 
   has_one :address, as: :addressable, dependent: :destroy
@@ -59,6 +61,50 @@ class Client < ApplicationRecord
     customer.to_hash.dig(:cash_balance, :available, :jpy) || 0
   end
 
+  def self.notice_cash_balance_transaction(transaction)
+    client = find_by(stripe_customer_id: transaction.customer)
+    return unless client
+
+    case transaction.type
+    when "return_canceled"
+      client.release_return_fee!
+    when "transferred_to_balance"
+      # Stripe gives unclaimed credit to the account after 90 days; only the owner can return it now.
+      Rails.error.report CashBalanceTransferredError.new("Unclaimed cash balance moved to the account balance"),
+        context: { client_id: client.id, transaction_id: transaction.id, amount: transaction.net_amount }, handled: true
+    end
+
+    CashBalanceSettlementJob.perform_later client
+  end
+
+  # Settlement waits while Stripe is funding a bank transfer, because Stripe puts
+  # every new yen towards it and the two would compete for the same money.
+  def settle_cash_balance!
+    replay_balance_draws
+    balance = cash_balance
+    return if balance.positive? && awaiting_bank_transfer?
+
+    invoices = balance_candidates(balance)
+    drawn = invoices.sum do |invoice|
+      next 0 if balance < Invoice::Payable::MINIMUM_CHARGE
+
+      invoice.apply_balance!(balance).tap { balance -= it }
+    end
+
+    notice_credit drawn.positive? ? cash_balance : balance
+  end
+
+  # A cancelled return gives back the refund but not the fee Stripe charged for it.
+  # The event names neither, so the newest fee charge is checked.
+  def release_return_fee!
+    fee = Stripe::PaymentIntent.list(customer: stripe_customer_id, limit: 100).auto_paging_each
+      .find { it.status == "succeeded" && it.metadata["credit_return_refund"] }
+    return unless fee
+
+    refund = Stripe::Refund.retrieve fee.metadata["credit_return_refund"]
+    update! prepaid_return_fee_payment_intent_id: fee.id if refund.status == "canceled"
+  end
+
   # A return cancelled after Stripe's 45 days leaves the fee already charged, so
   # the next return is free.
   def return_fee
@@ -101,6 +147,40 @@ class Client < ApplicationRecord
   end
 
   private
+
+  def replay_balance_draws
+    invoices.sent.where(id: InvoicePayment.balance.pending.select(:invoice_id)).each { it.apply_balance!(0) }
+  end
+
+  def awaiting_bank_transfer?
+    Stripe::PaymentIntent.list(customer: stripe_customer_id, limit: 100).auto_paging_each.any? do
+      it.status == "requires_action" && it["next_action"]&.[]("type") == "display_bank_transfer_instructions"
+    end
+  end
+
+  def balance_candidates(balance)
+    exact = invoices.sent.where("total - paid_amount = ?", balance).to_a
+    exact.one? ? exact : invoices.sent.order(:issue_date, :invoice_number).to_a
+  end
+
+  # One email per leftover: a rerun with the same balance is not news. It waits for
+  # a delivery under way, which may still spend the credit.
+  def notice_credit(leftover)
+    return if leftover.positive? && delivery_in_progress?
+
+    noticed = with_lock do
+      next false if credit_notified_amount == leftover
+
+      update! credit_notified_amount: leftover
+      leftover.positive?
+    end
+
+    InvoiceMailer.send_credit_notice(self, leftover).deliver_later if noticed
+  end
+
+  def delivery_in_progress?
+    invoices.preparing.or(invoices.failed.where(id: InvoicePayment.credit.succeeded.select(:invoice_id))).exists?
+  end
 
   def charge_return_fee(fee, refund, key)
     intent = Stripe::PaymentIntent.create({

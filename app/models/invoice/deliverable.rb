@@ -53,6 +53,7 @@ module Invoice::Deliverable
     end
 
     InvoiceMailer.send_invoice(self).deliver_later
+    CashBalanceSettlementJob.perform_later client if client.stripe?
   end
 
   private

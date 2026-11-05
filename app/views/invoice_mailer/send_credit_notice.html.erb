@@ -1,0 +1,27 @@
+<%
+  font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif"
+  greeting_style = "margin:0 0 16px 0; font-family:#{font}; font-size:16px; line-height:1.6; font-weight:600; color:#111827;"
+  p_style = "margin:0 0 16px 0; font-family:#{font}; font-size:16px; line-height:1.7; color:#1f2933;"
+  opening = t(".opening", default: "")
+  signature = t(".signature", default: "")
+-%>
+<p class="t-strong" style="<%= greeting_style %>"><%= t(".greeting", client_name: @client.name) %></p>
+<% if opening.present? %><p class="t-body" style="<%= p_style %>"><%= opening %></p><% end %>
+<p class="t-body" style="<%= p_style %>"><%= t(".intro", amount: yen(@amount)) %></p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+  <tr>
+    <td style="border:1px solid #e5e7eb; border-radius:8px; padding:20px 24px;" class="email-card email-rule">
+      <p class="t-muted" style="margin:0 0 4px 0; font-family:<%= font %>; font-size:13px; line-height:1.5; color:#6b7280;"><%= t(".credit_label") %></p>
+      <p class="t-strong" style="margin:0; font-family:<%= font %>; font-size:24px; line-height:1.3; font-weight:700; color:#111827;"><%= yen(@amount) %></p>
+    </td>
+  </tr>
+</table>
+
+<p class="t-body" style="<%= p_style %>"><%= t(".stripe_return") %></p>
+<% if @return_url %>
+<p class="t-body" style="<%= p_style %>"><%= t(".return_now", fee: yen(Client::CASH_BALANCE_RETURN_FEE)) %> <a href="<%= @return_url %>" target="_blank" rel="noopener" style="color:#2563eb;"><%= t(".return_link") %></a></p>
+<% end %>
+
+<p class="t-body" style="<%= p_style %>"><%= t(".closing") %></p>
+<p class="t-body" style="margin:24px 0 0 0; font-family:<%= font %>; font-size:16px; line-height:1.6; color:#1f2933;"><% if signature.present? %><%= signature %><br><% end %><strong class="t-strong" style="color:#111827;"><%= @business.name %></strong></p>
