@@ -119,5 +119,7 @@ class CreditRefundsControllerTest < ActionDispatch::IntegrationTest
   def stub_cash_balance(amount)
     Stripe::Customer.stubs(:retrieve).with(id: "cus_test_sakura123", expand: [ "cash_balance" ])
       .returns(Stripe::Customer.construct_from(id: "cus_test_sakura123", cash_balance: { available: { jpy: amount } }))
+    Stripe::Customer.stubs(:list_cash_balance_transactions).with("cus_test_sakura123", limit: 1)
+      .returns(Stripe::ListObject.construct_from(object: "list", data: [ { id: "ccsbtxn_latest" } ], has_more: false))
   end
 end

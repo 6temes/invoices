@@ -100,16 +100,30 @@ class ClientTest < ActiveSupport::TestCase
     stub_cash_balance 10_000
     Stripe::Refund.expects(:create).with(
       { origin: "customer_balance", customer: "cus_test_sakura123", amount: 9_725, currency: "jpy", instructions_email: "keiri@sakura.example.jp" },
-      { idempotency_key: "return-#{client.id}-10000-#{Date.current.iso8601}" }
+      { idempotency_key: "return-#{client.id}-ccsbtxn_latest" }
     ).returns(Stripe::Refund.construct_from(id: "rcb_return"))
     Stripe::PaymentIntent.expects(:create).with do |params, options|
       params[:amount] == 275 && params[:customer] == "cus_test_sakura123" && params[:confirm] &&
         params[:payment_method_data] == { type: "customer_balance" } && params[:metadata] == { credit_return_refund: "rcb_return" } &&
-        options == { idempotency_key: "return-fee-#{client.id}-10000-#{Date.current.iso8601}" }
+        options == { idempotency_key: "return-fee-#{client.id}-ccsbtxn_latest" }
     end.returns(Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded"))
 
     assert_equal :returned, client.refund_cash_balance!(10_000)
     assert_equal 0, client.reload.credit_notified_amount
+  end
+
+  test "the same balance returned again after new credit arrives is a new return, not a replay" do
+    client = clients(:sakura)
+    stub_cash_balance 10_000
+    keys = []
+    Stripe::Refund.stubs(:create).with { |_, options| keys << options[:idempotency_key] }.returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.stubs(:create).returns(Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded"))
+
+    client.refund_cash_balance!(10_000)
+    stub_latest_cash_balance_transaction "ccsbtxn_newer"
+    client.refund_cash_balance!(10_000)
+
+    assert_equal [ "return-#{client.id}-ccsbtxn_latest", "return-#{client.id}-ccsbtxn_newer" ], keys
   end
 
   test "returning credit makes no Stripe call when the balance moved since it was shown" do
@@ -135,6 +149,7 @@ class ClientTest < ActiveSupport::TestCase
     stub_cash_balance 9_725
     Stripe::Refund.expects(:create).with { |params, _| params[:amount] == 9_725 }.returns(Stripe::Refund.construct_from(id: "rcb_again"))
     Stripe::PaymentIntent.expects(:create).never
+    Stripe::PaymentIntent.expects(:update).with("pi_fee_earlier", metadata: { credit_return_waived_for: "rcb_again" })
 
     assert_equal 0, client.return_fee
     assert_equal :returned, client.refund_cash_balance!(9_725)
@@ -170,6 +185,15 @@ class ClientTest < ActiveSupport::TestCase
     assert_equal "pi_fee", client.reload.prepaid_return_fee_payment_intent_id
   end
 
+  test "a fee that already paid for a free return is not released again" do
+    client = clients(:sakura)
+    stub_fee_charge refund_status: "canceled", waived: true
+
+    client.release_return_fee!
+
+    assert_nil client.reload.prepaid_return_fee_payment_intent_id
+  end
+
   test "a return still on its way keeps the fee charged" do
     client = clients(:sakura)
     stub_fee_charge refund_status: "pending"
@@ -181,8 +205,9 @@ class ClientTest < ActiveSupport::TestCase
 
   private
 
-  def stub_fee_charge(refund_status:)
-    fee = Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded", metadata: { credit_return_refund: "rcb_return" })
+  def stub_fee_charge(refund_status:, waived: false)
+    metadata = { credit_return_refund: "rcb_return", credit_return_waived_for: ("rcb_free" if waived) }.compact
+    fee = Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded", metadata:)
     draw = Stripe::PaymentIntent.construct_from(id: "pi_draw", status: "succeeded", metadata: { invoice_id: "1" })
     Stripe::PaymentIntent.stubs(:list).with(customer: "cus_test_sakura123", limit: 100)
       .returns(Stripe::ListObject.construct_from(object: "list", data: [ draw, fee ], has_more: false))
@@ -192,5 +217,11 @@ class ClientTest < ActiveSupport::TestCase
   def stub_cash_balance(amount)
     Stripe::Customer.stubs(:retrieve).with(id: "cus_test_sakura123", expand: [ "cash_balance" ])
       .returns(Stripe::Customer.construct_from(id: "cus_test_sakura123", cash_balance: { available: { jpy: amount } }))
+    stub_latest_cash_balance_transaction "ccsbtxn_latest"
+  end
+
+  def stub_latest_cash_balance_transaction(id)
+    Stripe::Customer.stubs(:list_cash_balance_transactions).with("cus_test_sakura123", limit: 1)
+      .returns(Stripe::ListObject.construct_from(object: "list", data: [ { id:, object: "customer_cash_balance_transaction" } ], has_more: false))
   end
 end

@@ -79,6 +79,11 @@ class InvoiceMailer < ApplicationMailer
     I18n.with_locale(invoice.locale) do
       @preheader = t("invoice_mailer.send_partial_payment.preheader",
         number: invoice.invoice_number, amount_remaining: view_context.yen(@pending_payment.amount_remaining))
+      # Without bank details the amount came from the client's credit, not a transfer.
+      transfer = @pending_payment.bank_details.present?
+      @intro = t("invoice_mailer.send_partial_payment.#{transfer ? "intro" : "intro_credit"}", number: invoice.invoice_number,
+        amount_received: view_context.yen(@pending_payment.amount_received), amount_remaining: view_context.yen(@pending_payment.amount_remaining))
+      @received_label = t(transfer ? "invoice.amount_received" : "invoice.credit_applied")
 
       mail(
         to: @client.email_with_name,

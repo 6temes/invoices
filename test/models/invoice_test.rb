@@ -261,6 +261,19 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_enqueued_with(job: CashBalanceSettlementJob, args: [ clients(:sakura) ]) { invoice.mark_as_paid! }
   end
 
+  test "a Checkout payment, whole or in part, settles what the cash balance no longer waits for" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    assert_enqueued_with(job: CashBalanceSettlementJob, args: [ clients(:sakura) ]) do
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_part", payment_intent: "pi_part", amount_total: 100_000)
+    end
+    assert_enqueued_with(job: CashBalanceSettlementJob, args: [ clients(:sakura) ]) do
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_rest", payment_intent: "pi_rest", amount_total: 147_500)
+    end
+    assert invoice.reload.paid?
+  end
+
   test "paying a bank transfer client's invoice settles no cash balance" do
     invoice = invoices(:sakura_january)
     attach_fake_deliverables invoice

@@ -164,6 +164,15 @@ class CashBalanceSettlementJobTest < ActiveJob::TestCase
     assert_enqueued_with(job: CashBalanceSettlementJob) { perform }
   end
 
+  test "an invoice paid by another route after settlement loaded it draws nothing" do
+    loaded = Invoice.find(@older.id)
+    Invoice.find(@older.id).mark_as_paid!
+    Stripe::PaymentIntent.expects(:create).never
+
+    assert_equal 0, loaded.apply_balance!(300_000)
+    assert_equal %w[ manual ], @older.payments.succeeded.pluck(:kind)
+  end
+
   private
 
   def perform

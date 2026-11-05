@@ -175,8 +175,7 @@ module Invoice::Payable
     trim_kept_credit if payments.credit.succeeded.exists?
   end
 
-  # Spends cash balance no pending payment needs, and returns what it took. A
-  # pending draw is replayed first: Stripe may already have taken its amount.
+  # A pending draw is replayed first: Stripe may already have taken its amount.
   def apply_balance!(balance)
     raise Invoice::InvalidStatusError, "Invoice must be sent to apply a balance" unless sent?
 
@@ -184,13 +183,14 @@ module Invoice::Payable
       return 0 if credit_for(balance).zero? || !release_checkout_for_balance
     end
 
-    due = amount_due
+    drawn_before = payments.balance.succeeded.sum(:amount)
     outcome = draw_credit(kind: :balance, balance:)
     settle_payment outcome, pending_session_id: nil
+    drawn = payments.balance.succeeded.sum(:amount) - drawn_before
     if outcome == :recorded
-      InvoiceMailer.send_partial_payment(self, { amount_received: due - amount_due, amount_remaining: amount_due }).deliver_later
+      InvoiceMailer.send_partial_payment(self, { amount_received: drawn, amount_remaining: amount_due }).deliver_later
     end
-    due - amount_due
+    drawn
   end
 
   private
@@ -213,11 +213,12 @@ module Invoice::Payable
     end
   end
 
+  # Sized on the locked row: the invoice may have been paid since it was loaded.
   def start_credit(balance, kind:)
-    amount = credit_for(balance)
-    return if amount.zero?
-
     with_lock do
+      amount = credit_for(balance)
+      next if amount.zero?
+
       payments.create!(kind:, status: :pending, amount:).tap do
         it.update! idempotency_key: "invoice-payment-#{it.id}"
       end
@@ -380,7 +381,7 @@ module Invoice::Payable
 
   # Paying by another route can leave cash balance that nothing waits for any more.
   def settle_cash_balance_later(outcome)
-    CashBalanceSettlementJob.perform_later client if client.stripe? && outcome.in?(%i[ paid recorded ])
+    client.settle_cash_balance_later if outcome.in?(%i[ paid recorded ])
   end
 
   def send_receipt
