@@ -43,17 +43,44 @@ module Invoice::Payable
 
       invoice.apply_checkout_session session, payment_intent:
     end
+
+    def notice_partial_payment(intent)
+      return unless intent.status == "requires_action"
+
+      invoice_id = intent.metadata["invoice_id"] || checkout_session_invoice_id(intent)
+      find_by(id: invoice_id)&.notice_partial_payment Invoice::PendingPayment.from(intent)
+    end
+
+    def checkout_session_invoice_id(intent)
+      Stripe::Checkout::Session.list(payment_intent: intent.id).data.first&.metadata&.[]("invoice_id")
+    end
+    private :checkout_session_invoice_id
   end
 
   def reconcile_checkout_session(session)
     apply_checkout_session session, payment_intent: self.class.unsettled_payment_intent(session)
   end
 
-  def checkout_pending?
-    return false if stripe_checkout_session_id.blank?
+  def pending_payment
+    return if stripe_checkout_session_id.blank?
 
     session = Stripe::Checkout::Session.retrieve stripe_checkout_session_id
-    session.status == "complete" && reconcile_checkout_session(session) == :pending
+    return unless session.status == "complete"
+
+    intent = self.class.unsettled_payment_intent(session)
+    Invoice::PendingPayment.from(intent) if apply_checkout_session(session, payment_intent: intent) == :pending
+  end
+
+  # Stripe redelivers events and sends them out of order, so only a larger amount
+  # than the client was last told about is news.
+  def notice_partial_payment(pending)
+    noticed = with_lock do
+      if sent? && pending.amount_received > partial_payment_notified_amount
+        update! partial_payment_notified_amount: pending.amount_received
+      end
+    end
+
+    InvoiceMailer.send_partial_payment(self, pending.to_h).deliver_later if noticed
   end
 
   def apply_checkout_session(session, payment_intent: nil)
@@ -122,7 +149,8 @@ module Invoice::Payable
       mode: "payment",
       success_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
       cancel_url: Rails.application.routes.url_helpers.public_payment_url(token:, host:),
-      metadata: { invoice_id: id }
+      metadata: { invoice_id: id },
+      payment_intent_data: { metadata: { invoice_id: id } }
     )
 
     with_lock do

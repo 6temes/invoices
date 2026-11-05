@@ -3,10 +3,5 @@
 <%= t("invoice.pay") %>: <%= payment_url %>
 <%= t("invoice_mailer.shared.pay_note") %>
 <% else -%>
-<%= t("invoice.bank_transfer_instructions") %>
-<%= t("invoice.bank_name") %>: <%= business.bank_name %>
-<%= t("invoice.bank_branch") %>: <%= business.bank_branch %>
-<%= t("invoice.bank_account_type") %>: <%= business.bank_account_type %>
-<%= t("invoice.bank_account_number") %>: <%= business.bank_account_number %>
-<%= t("invoice.bank_account_holder") %>: <%= business.bank_account_holder %>
+<%= render "bank_account", heading: t("invoice.bank_transfer_instructions"), rows: business_bank_rows(business) -%>
 <% end -%>

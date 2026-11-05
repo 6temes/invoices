@@ -136,6 +136,39 @@ class InvoiceMailerTest < ActionMailer::TestCase
     assert_includes email.text_part.decoded, "引き続きどうぞよろしくお願いいたします"
   end
 
+  # --- send_partial_payment ---
+
+  test "send_partial_payment tells the client what arrived, what is still due and where to send it" do
+    invoice = invoices(:sakura_january) # ja, stripe
+
+    email = InvoiceMailer.send_partial_payment(invoice, partial_payment(received: 247_060, remaining: 440))
+
+    assert_includes email.subject, invoice.invoice_number.to_s
+    [ email.html_part.decoded, email.text_part.decoded ].each do |body|
+      assert_includes body, "¥440"
+      assert_includes body, "¥247,060"
+      assert_includes body, "¥247,500"
+      assert_includes body, "Example Bank"
+      assert_includes body, "7654321"
+      assert_includes body, "普通"
+      assert_includes body, "https://payments.stripe.com/bank_transfers/instructions/test_example"
+      assert_includes body, "/pay/"
+      assert_not_includes body, businesses(:default).bank_name
+    end
+    assert_empty email.attachments
+  end
+
+  test "send_partial_payment speaks the client's language" do
+    invoice = invoices(:sakura_january)
+    invoice.update_columns locale: "en"
+
+    email = InvoiceMailer.send_partial_payment(invoice, partial_payment(received: 100_000, remaining: 147_500))
+
+    assert_includes email.subject, "Partial payment"
+    assert_includes email.text_part.decoded, "I've received ¥100,000"
+    assert_includes email.text_part.decoded, "Ordinary"
+  end
+
   # --- send_reminder ---
 
   test "send_reminder localizes the subject and body per locale" do
@@ -277,5 +310,12 @@ class InvoiceMailerTest < ActionMailer::TestCase
   def attach_fake_deliverables(invoice)
     attach_fake_pdf invoice
     attach_fake_ubl invoice
+  end
+
+  def partial_payment(received:, remaining:)
+    { amount_received: received, amount_remaining: remaining,
+      instructions_url: "https://payments.stripe.com/bank_transfers/instructions/test_example",
+      bank_details: { bank_name: "Example Bank", branch_name: "Sample Branch", account_type: "futsu",
+                      account_number: "7654321", account_holder_name: "Example Consulting" } }
   end
 end

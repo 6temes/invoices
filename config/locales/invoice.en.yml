@@ -33,7 +33,14 @@ en:
     bank_account_number: Account No.
     pay: Pay now
     payment_error: "The payment could not be processed. Please try again in a few minutes."
+    amount_received: Received so far
+    still_due: Still due
+    bank_account_types:
+      futsu: Ordinary
+      toza: Checking
+    transfer_instructions: View the transfer instructions
     payment_pending: "A payment for this invoice is already in progress. I'll send a receipt by email once it arrives."
+    payment_partially_received: "Part of your transfer has arrived. Please send the rest using the transfer instructions."
     retainer_subject: Web development and maintenance
     retainer_subject_with_infrastructure: Web development, maintenance, and server infrastructure
     retainer_line: "Monthly retainer for %{subject}, %{period} (includes %{hours} hours)"
@@ -71,6 +78,16 @@ en:
       preheader: "Invoice #%{number} is still open, due %{due_date}."
       greeting: "Hi %{client_name},"
       intro: "A quick note that invoice #%{number} for %{period} is still open."
+      closing: "If it is already on its way, please ignore this message."
+      signature: "Best regards,"
+    send_partial_payment:
+      subject: "Partial payment received: invoice #%{number} (%{invoice_subject})"
+      preheader: "%{amount_remaining} is still due on invoice #%{number}."
+      greeting: "Hi %{client_name},"
+      intro: "I've received %{amount_received} for invoice #%{number}, so %{amount_remaining} is still due."
+      transfer_rest: "Please transfer the rest to:"
+      payment_page: "The payment page always shows the latest figures."
+      payment_page_link: Open the payment page
       closing: "If it is already on its way, please ignore this message."
       signature: "Best regards,"
     send_receipt:

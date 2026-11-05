@@ -1,0 +1,29 @@
+<%= t(".greeting", client_name: @client.name) %>
+<% opening = t(".opening", default: "") -%>
+<% if opening.present? -%>
+<%= opening %>
+<% end -%>
+<%= t(".intro", number: @invoice.invoice_number,
+      amount_received: yen(@pending_payment.amount_received), amount_remaining: yen(@pending_payment.amount_remaining)) %>
+
+<%= render "amount_summary",
+      number: @invoice.invoice_number,
+      amount: @pending_payment.amount_remaining,
+      amount_label: t("invoice.still_due"),
+      date_label: t("invoice.due_date"),
+      date: @invoice.due_date,
+      amount_due: @invoice.amount_due,
+      received: @pending_payment.amount_received -%>
+
+<%= render "bank_account", heading: t(".transfer_rest"), rows: transfer_bank_rows(@pending_payment.bank_details) -%>
+
+<%= t("invoice.transfer_instructions") %>: <%= @pending_payment.instructions_url %>
+<%= t(".payment_page") %>
+<%= @payment_url %>
+
+<%= t(".closing") %>
+<% signature = t(".signature", default: "") -%>
+<% if signature.present? -%>
+<%= signature %>
+<% end -%>
+<%= @business.name %>

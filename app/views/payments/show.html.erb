@@ -3,10 +3,25 @@
     <h1><%= t("invoice.document_title") %> #<%= @invoice.invoice_number %></h1>
     <p class="text-muted"><%= @invoice.client.name %></p>
 
-    <div class="summary-card payment-amount">
-      <div class="summary-card-label"><%= t("invoice.amount_due") %></div>
-      <div class="summary-card-value">¥<%= number_with_delimiter @invoice.amount_due %></div>
-    </div>
+    <% if @pending_payment&.bank_transfer? %>
+      <div class="summary-card payment-amount">
+        <div class="summary-card-label"><%= t("invoice.still_due") %></div>
+        <div class="summary-card-value">¥<%= number_with_delimiter @pending_payment.amount_remaining %></div>
+      </div>
+
+      <dl class="pending-figures">
+        <dt><%= t("invoice.amount_due") %></dt>
+        <dd>¥<%= number_with_delimiter @invoice.amount_due %></dd>
+
+        <dt><%= t("invoice.amount_received") %></dt>
+        <dd>¥<%= number_with_delimiter @pending_payment.amount_received %></dd>
+      </dl>
+    <% else %>
+      <div class="summary-card payment-amount">
+        <div class="summary-card-label"><%= t("invoice.amount_due") %></div>
+        <div class="summary-card-value">¥<%= number_with_delimiter @invoice.amount_due %></div>
+      </div>
+    <% end %>
 
     <div class="detail-section">
       <div class="detail-label"><%= t("invoice.subject_label") %></div>
@@ -18,7 +33,10 @@
       <div class="detail-value"><%= @invoice.due_date %></div>
     </div>
 
-    <% if @checkout_pending %>
+    <% if @pending_payment&.bank_transfer? %>
+      <p class="payment-pending mt-3"><%= t(@pending_payment.partially_received? ? "invoice.payment_partially_received" : "invoice.payment_pending") %></p>
+      <p class="mt-1"><%= link_to t("invoice.transfer_instructions"), @pending_payment.instructions_url, target: "_blank", rel: "noopener" %></p>
+    <% elsif @pending_payment %>
       <p class="payment-pending mt-3"><%= t("invoice.payment_pending") %></p>
     <% elsif @invoice.sent? && @invoice.client.stripe? %>
       <div class="mt-3">
