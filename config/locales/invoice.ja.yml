@@ -57,6 +57,20 @@ ja:
     thank_you_title: お支払いありがとうございます
     thank_you_body: "請求書 #%{number} のお支払いを確認いたしました。"
 
+  credit_refund:
+    title: クレジットのご返金
+    intro: "お支払いのうち%{balance}をクレジットとしてお預かりしており、次回のご請求から差し引かせていただきます。銀行口座へのご返金をご希望の場合は、下記よりお手続きいただけます。"
+    balance: クレジット残高
+    fee: Stripe返金手数料
+    net_amount: ご返金額
+    bank_details_note: ご返金先の口座情報は、Stripeよりメールにてお伺いいたします。
+    submit: "%{amount}を銀行口座に返金する"
+    below_fee: "クレジット残高%{balance}はStripeの返金手数料%{fee}に満たないため、ご返金いたしかねます。次回のご請求から差し引かせていただきます。"
+    nothing_to_return: ご返金できるクレジットはございません。
+    balance_changed: このページを開いた後にクレジット残高が変わりました。新しい金額をご確認ください。
+    returned_title: ご返金を承りました
+    returned_body: "Stripeより%{email}宛てに口座情報をお伺いするメールをお送りいたします。ご返信いただき次第、ご返金いたします。"
+
   invoice_mailer:
     footer:
       automated: 本メールは自動送信されています。

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_04_143218) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_05_060000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.integer "blob_id", null: false
     t.datetime "created_at", null: false
@@ -96,6 +96,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_04_143218) do
     t.string "stripe_customer_id"
     t.string "tax_registration_number"
     t.datetime "updated_at", null: false
+    t.integer "credit_notified_amount", default: 0, null: false
+    t.string "prepaid_return_fee_payment_intent_id"
   end
 
   create_table "extra_hours", force: :cascade do |t|

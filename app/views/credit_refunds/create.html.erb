@@ -1,0 +1,10 @@
+<div class="card payment-card">
+  <h1 class="text-success"><%= t("credit_refund.returned_title") %></h1>
+
+  <div class="summary-card payment-amount">
+    <div class="summary-card-label"><%= t("credit_refund.net_amount") %></div>
+    <div class="summary-card-value"><%= yen(@returned) %></div>
+  </div>
+
+  <p class="mt-2"><%= t("credit_refund.returned_body", email: @client.email) %></p>
+</div>

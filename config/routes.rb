@@ -46,6 +46,7 @@ Rails.application.routes.draw do
   # Public (unauthenticated) payment flow
   get "pay/:token", to: "payments#show", as: :public_payment
   post "pay/:token", to: "payments#create", as: :public_payment_create
+  resource :credit_refund, path: "credit/:token", only: %i[ show create ]
 
   namespace :webhooks do
     resources :stripe_event_notifications, only: :create

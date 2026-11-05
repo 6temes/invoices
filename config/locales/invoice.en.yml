@@ -57,6 +57,20 @@ en:
     thank_you_title: Thank you for your payment
     thank_you_body: "Invoice #%{number} has been paid."
 
+  credit_refund:
+    title: Return your credit
+    intro: "I'm holding %{balance} of your payments as credit, to be deducted from your next invoice. You can have it returned to your bank account instead."
+    balance: Credit
+    fee: Stripe return fee
+    net_amount: Amount returned
+    bank_details_note: "Stripe will email you to ask which bank account to send it to."
+    submit: "Return %{amount} to my bank account"
+    below_fee: "Your credit of %{balance} does not cover Stripe's return fee of %{fee}, so it cannot be returned. I'll deduct it from your next invoice."
+    nothing_to_return: "There is no credit left to return."
+    balance_changed: "Your credit has changed since this page was opened. Please check the new amount."
+    returned_title: Return requested
+    returned_body: "Stripe will email %{email} to ask for your bank details and sends the money once you reply."
+
   invoice_mailer:
     footer:
       automated: "This message was sent automatically."

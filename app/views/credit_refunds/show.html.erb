@@ -1,0 +1,35 @@
+<% returnable = @client.returnable_credit(@balance) %>
+<div class="card payment-card">
+  <h1><%= t("credit_refund.title") %></h1>
+  <p class="text-muted"><%= @client.name %></p>
+
+  <% if returnable.positive? %>
+    <p class="mt-2"><%= t("credit_refund.intro", balance: yen(@balance)) %></p>
+
+    <div class="summary-card payment-amount">
+      <div class="summary-card-label"><%= t("credit_refund.net_amount") %></div>
+      <div class="summary-card-value"><%= yen(returnable) %></div>
+    </div>
+
+    <dl class="pending-figures">
+      <dt><%= t("credit_refund.balance") %></dt>
+      <dd><%= yen(@balance) %></dd>
+
+      <dt><%= t("credit_refund.fee") %></dt>
+      <dd><%= yen(@client.return_fee) %></dd>
+    </dl>
+
+    <p class="payment-pending"><%= t("credit_refund.bank_details_note") %></p>
+
+    <div class="mt-3">
+      <%= form_with url: credit_refund_path(params[:token]), method: :post do %>
+        <%= hidden_field_tag :balance, @balance %>
+        <%= submit_tag t("credit_refund.submit", amount: yen(returnable)), class: "btn btn-accent btn-lg" %>
+      <% end %>
+    </div>
+  <% elsif @balance.positive? %>
+    <p class="mt-2"><%= t("credit_refund.below_fee", balance: yen(@balance), fee: yen(@client.return_fee)) %></p>
+  <% else %>
+    <p class="mt-2"><%= t("credit_refund.nothing_to_return") %></p>
+  <% end %>
+</div>
