@@ -207,13 +207,13 @@ class InvoiceMailerTest < ActionMailer::TestCase
     end
   end
 
-  test "send_credit_notice leaves out the return link when the credit does not cover the fee" do
+  test "send_credit_notice leaves out the return link when the credit is too small to return" do
     client = clients(:sakura)
-    client.update! locale: "en", credit_notified_amount: 275
+    client.update! locale: "en", credit_notified_amount: 549
 
-    email = InvoiceMailer.send_credit_notice(client, 275)
+    email = InvoiceMailer.send_credit_notice(client, 549)
 
-    assert_includes email.text_part.decoded, "I'm holding ¥275 of your payments as credit"
+    assert_includes email.text_part.decoded, "I'm holding ¥549 of your payments as credit"
     [ email.html_part.decoded, email.text_part.decoded ].each do |body|
       assert_not_includes body, "/credit/"
       assert_not_includes body, "returned now"

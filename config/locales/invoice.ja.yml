@@ -65,7 +65,7 @@ ja:
     net_amount: ご返金額
     bank_details_note: ご返金先の口座情報は、Stripeよりメールにてお伺いいたします。
     submit: "%{amount}を銀行口座に返金する"
-    below_fee: "クレジット残高%{balance}はStripeの返金手数料%{fee}に満たないため、ご返金いたしかねます。次回のご請求から差し引かせていただきます。"
+    below_minimum: "ご返金は%{minimum}以上のクレジットから承っております。クレジット残高%{balance}は、次回のご請求から差し引かせていただきます。"
     nothing_to_return: ご返金できるクレジットはございません。
     balance_changed: このページを開いた後にクレジット残高が変わりました。新しい金額をご確認ください。
     returned_title: ご返金を承りました

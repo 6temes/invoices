@@ -65,7 +65,7 @@ en:
     net_amount: Amount returned
     bank_details_note: "Stripe will email you to ask which bank account to send it to."
     submit: "Return %{amount} to my bank account"
-    below_fee: "Your credit of %{balance} does not cover Stripe's return fee of %{fee}, so it cannot be returned. I'll deduct it from your next invoice."
+    below_minimum: "Credit can be returned from %{minimum}, so your credit of %{balance} will be deducted from your next invoice instead."
     nothing_to_return: "There is no credit left to return."
     balance_changed: "Your credit has changed since this page was opened. Please check the new amount."
     returned_title: Return requested

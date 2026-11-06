@@ -134,13 +134,14 @@ class ClientTest < ActiveSupport::TestCase
     assert_equal :changed, clients(:sakura).refund_cash_balance!(10_000)
   end
 
-  test "a balance at or below the fee has nothing to return" do
-    stub_cash_balance 275
+  test "a return is offered only when the client gets back at least the fee" do
+    stub_cash_balance 549
     Stripe::Refund.expects(:create).never
 
     client = clients(:sakura)
-    assert_equal 0, client.returnable_credit(275)
-    assert_equal :nothing_to_return, client.refund_cash_balance!(275)
+    assert_equal 0, client.returnable_credit(549)
+    assert_equal 275, client.returnable_credit(550)
+    assert_equal :nothing_to_return, client.refund_cash_balance!(549)
   end
 
   test "a fee already paid on a cancelled return is not charged again" do

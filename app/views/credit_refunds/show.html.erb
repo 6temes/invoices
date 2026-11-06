@@ -29,7 +29,7 @@
       <% end %>
     </div>
   <% elsif @balance.positive? %>
-    <p class="mt-2"><%= t("credit_refund.below_fee", balance: yen(@balance), fee: yen(@client.return_fee)) %></p>
+    <p class="mt-2"><%= t("credit_refund.below_minimum", balance: yen(@balance), minimum: yen(@client.minimum_returnable_balance)) %></p>
   <% else %>
     <p class="mt-2"><%= t("credit_refund.nothing_to_return") %></p>
   <% end %>

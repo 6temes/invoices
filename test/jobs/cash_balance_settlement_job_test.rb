@@ -139,6 +139,19 @@ class CashBalanceSettlementJobTest < ActiveJob::TestCase
     assert_no_enqueued_emails { perform }
   end
 
+  test "leftover credit below the minimum charge is not announced, and a later larger credit is" do
+    @older.update_columns status: "paid", paid_amount: @older.total
+    @newer.update_columns status: "paid", paid_amount: @newer.total
+    @client.update! credit_notified_amount: 4_000
+    stub_cash_balance 49
+
+    assert_no_enqueued_emails { perform }
+    assert_equal 0, @client.reload.credit_notified_amount
+
+    stub_cash_balance 4_000
+    assert_enqueued_email_with(InvoiceMailer, :send_credit_notice, args: [ @client, 4_000 ]) { perform }
+  end
+
   test "leftover credit waits while an invoice is being delivered" do
     @older.update_columns status: "paid", paid_amount: @older.total
     @newer.update_columns status: "preparing"

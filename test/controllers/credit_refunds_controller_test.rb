@@ -21,14 +21,15 @@ class CreditRefundsControllerTest < ActionDispatch::IntegrationTest
     assert_select "script", count: 0
   end
 
-  test "show offers nothing when the balance does not cover the fee" do
-    stub_cash_balance 200
+  test "show offers nothing when the balance is below the smallest return" do
+    stub_cash_balance 549
 
     get credit_refund_path(@token)
 
     assert_response :success
     assert_select "form", count: 0
-    assert_match "¥200", response.body
+    assert_match "¥549", response.body
+    assert_match "¥550", response.body
   end
 
   test "show offers nothing when the balance is empty" do

@@ -81,8 +81,13 @@ module Client::CashBalance
     prepaid_return_fee_payment_intent_id ? 0 : CASH_BALANCE_RETURN_FEE
   end
 
+  # A return is offered only when the client gets back at least the fee itself.
+  def minimum_returnable_balance
+    return_fee + CASH_BALANCE_RETURN_FEE
+  end
+
   def returnable_credit(balance)
-    balance > return_fee ? balance - return_fee : 0
+    balance >= minimum_returnable_balance ? balance - return_fee : 0
   end
 
   # The refund goes first, so a failed fee charge leaves the fee as credit rather
@@ -157,6 +162,9 @@ module Client::CashBalance
   end
 
   def notice_credit(leftover)
+    # Settlement never draws under the minimum charge, so announcing it would
+    # promise a deduction that never comes.
+    leftover = 0 if leftover < Invoice::Payable::MINIMUM_CHARGE
     # A delivery under way may still spend the credit.
     return if leftover.positive? && delivery_in_progress?
     return if credit_notified_amount == leftover
