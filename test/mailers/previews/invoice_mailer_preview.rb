@@ -5,6 +5,14 @@
 # real development data. Pair with letter_opener for full-delivery checks.
 class InvoiceMailerPreview < ActionMailer::Preview
   # http://localhost:3000/rails/mailers/invoice_mailer/send_invoice_en
+  def send_credit_notice_en
+    InvoiceMailer.send_credit_notice(client("en"), 10_000)
+  end
+
+  def send_credit_notice_ja
+    InvoiceMailer.send_credit_notice(client("ja"), 10_000)
+  end
+
   def send_invoice_en
     InvoiceMailer.send_invoice(deliverable_invoice("en"))
   end
@@ -37,6 +45,14 @@ class InvoiceMailerPreview < ActionMailer::Preview
     InvoiceMailer.send_partial_payment(invoice("ja"), sample_partial_payment(invoice("ja")))
   end
 
+  def send_partial_payment_from_credit_en
+    InvoiceMailer.send_partial_payment(invoice("en"), { amount_received: 20_000, amount_remaining: 130_000 })
+  end
+
+  def send_partial_payment_from_credit_ja
+    InvoiceMailer.send_partial_payment(invoice("ja"), { amount_received: 20_000, amount_remaining: 130_000 })
+  end
+
   private
 
   def sample_partial_payment(invoice)
@@ -44,6 +60,10 @@ class InvoiceMailerPreview < ActionMailer::Preview
       instructions_url: "https://payments.stripe.com/bank_transfers/instructions/test_example",
       bank_details: { bank_name: "Example Bank", branch_name: "Sample Branch", account_type: "futsu",
                       account_number: "7654321", account_holder_name: "Example Consulting" } }
+  end
+
+  def client(locale)
+    Client.where(locale:).first || Client.first
   end
 
   def invoice(locale)

@@ -53,6 +53,7 @@ module Invoice::Deliverable
     end
 
     InvoiceMailer.send_invoice(self).deliver_later
+    client.settle_cash_balance_later
   end
 
   private

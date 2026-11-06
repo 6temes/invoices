@@ -1,0 +1,22 @@
+<%= t(".greeting", client_name: @client.name) %>
+<% opening = t(".opening", default: "") -%>
+<% if opening.present? -%>
+<%= opening %>
+<% end -%>
+<%= t(".intro", amount: yen(@amount)) %>
+
+<%= t(".credit_label") %>: <%= yen(@amount) %>
+
+<%= t(".stripe_return") %>
+<% if @return_url -%>
+
+<%= t(".return_now", fee: yen(Client::CASH_BALANCE_RETURN_FEE)) %>
+<%= @return_url %>
+<% end -%>
+
+<%= t(".closing") %>
+<% signature = t(".signature", default: "") -%>
+<% if signature.present? -%>
+<%= signature %>
+<% end -%>
+<%= @business.name %>

@@ -1,11 +1,11 @@
-<%# locals: (number:, amount:, amount_label:, date_label:, date:, total: nil, credit: 0, amount_due: nil, received: 0) -%>
+<%# locals: (number:, amount:, amount_label:, date_label:, date:, total: nil, credit: 0, amount_due: nil, received: 0, received_label: t("invoice.amount_received")) -%>
 <% if credit.positive? -%>
 <%= t("invoice.total") %>: <%= yen(total) %>
 <%= t("invoice.credit_applied") %>: −<%= yen(credit) %>
 <% end -%>
 <% if amount_due -%>
 <%= t("invoice.amount_due") %>: <%= yen(amount_due) %>
-<%= t("invoice.amount_received") %>: −<%= yen(received) %>
+<%= received_label %>: −<%= yen(received) %>
 <% end -%>
 <%= amount_label %>: <%= yen(amount) %>
 <%= t("invoice.id") %>: #<%= number %>

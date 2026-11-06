@@ -3,8 +3,7 @@
 <% if opening.present? -%>
 <%= opening %>
 <% end -%>
-<%= t(".intro", number: @invoice.invoice_number,
-      amount_received: yen(@pending_payment.amount_received), amount_remaining: yen(@pending_payment.amount_remaining)) %>
+<%= @intro %>
 
 <%= render "amount_summary",
       number: @invoice.invoice_number,
@@ -12,12 +11,15 @@
       amount_label: t("invoice.still_due"),
       date_label: t("invoice.due_date"),
       date: @invoice.due_date,
-      amount_due: @invoice.amount_due,
-      received: @pending_payment.amount_received -%>
+      amount_due: @pending_payment.amount_received + @pending_payment.amount_remaining,
+      received: @pending_payment.amount_received,
+      received_label: @received_label -%>
 
+<% if @pending_payment.bank_details -%>
 <%= render "bank_account", heading: t(".transfer_rest"), rows: transfer_bank_rows(@pending_payment.bank_details) -%>
 
 <%= t("invoice.transfer_instructions") %>: <%= @pending_payment.instructions_url %>
+<% end -%>
 <%= t(".payment_page") %>
 <%= @payment_url %>
 

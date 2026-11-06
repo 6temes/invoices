@@ -57,11 +57,37 @@ en:
     thank_you_title: Thank you for your payment
     thank_you_body: "Invoice #%{number} has been paid."
 
+  credit_refund:
+    title: Return your credit
+    intro: "I'm holding %{balance} of your payments as credit, to be deducted from your next invoice. You can have it returned to your bank account instead."
+    balance: Credit
+    fee: Stripe return fee
+    net_amount: Amount returned
+    bank_details_note: "Stripe will email you to ask which bank account to send it to."
+    submit: "Return %{amount} to my bank account"
+    below_minimum: "Credit can be returned from %{minimum}, so your credit of %{balance} will be deducted from your next invoice instead."
+    nothing_to_return: "There is no credit left to return."
+    balance_changed: "Your credit has changed since this page was opened. Please check the new amount."
+    returned_title: Return requested
+    returned_body: "Stripe will email %{email} to ask for your bank details and sends the money once you reply."
+    started_title: Your return is under way
+
   invoice_mailer:
     footer:
       automated: "This message was sent automatically."
     shared:
       pay_note: "Payments are processed by Stripe."
+    send_credit_notice:
+      subject: "You have %{amount} in credit"
+      preheader: "%{amount} of credit, to be deducted from your next invoice."
+      greeting: "Hi %{client_name},"
+      intro: "I'm holding %{amount} of your payments as credit and will deduct it from your next invoice."
+      credit_label: Credit
+      stripe_return: "If no invoice is issued within 75 days of the payment, Stripe returns the credit to you and emails you to ask for your bank details."
+      return_now: "To have it returned now instead, use this link (Stripe charges %{fee} for the return):"
+      return_link: Return my credit
+      closing: "Let me know if anything looks wrong."
+      signature: "Best regards,"
     send_invoice:
       subject: "Invoice #%{number}: %{invoice_subject}"
       preheader: "Invoice #%{number} for %{period}, due %{due_date}."
@@ -85,6 +111,7 @@ en:
       preheader: "%{amount_remaining} is still due on invoice #%{number}."
       greeting: "Hi %{client_name},"
       intro: "I've received %{amount_received} for invoice #%{number}, so %{amount_remaining} is still due."
+      intro_credit: "I've applied %{amount_received} of your credit to invoice #%{number}, so %{amount_remaining} is still due."
       transfer_rest: "Please transfer the rest to:"
       payment_page: "The payment page always shows the latest figures."
       payment_page_link: Open the payment page

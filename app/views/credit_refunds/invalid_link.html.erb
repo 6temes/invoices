@@ -1,0 +1,13 @@
+<%# No client resolved, so no client locale to render in. English only. %>
+<div class="card payment-card">
+  <h1>This credit link is no longer valid</h1>
+
+  <p class="mt-2 text-muted">
+    Credit links expire <%= distance_of_time_in_words 0, Invoice::PAYMENT_LINK_VALIDITY %> after they are sent,
+    and a newer credit email replaces the link in an older one.
+  </p>
+
+  <p class="mt-2">
+    Email <%= mail_to @business.email %> and I'll send you a new one.
+  </p>
+</div>

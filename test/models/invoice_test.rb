@@ -254,6 +254,36 @@ class InvoiceTest < ActiveSupport::TestCase
     assert_equal Date.current, invoice.paid_on
   end
 
+  test "paying a Stripe client's invoice by hand settles what their cash balance no longer waits for" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    assert_enqueued_with(job: CashBalanceSettlementJob, args: [ clients(:sakura) ]) { invoice.mark_as_paid! }
+  end
+
+  test "a Checkout payment, whole or in part, settles what the cash balance no longer waits for" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+
+    assert_enqueued_with(job: CashBalanceSettlementJob, args: [ clients(:sakura) ]) do
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_part", payment_intent: "pi_part", amount_total: 100_000)
+    end
+    assert_enqueued_with(job: CashBalanceSettlementJob, args: [ clients(:sakura) ]) do
+      Invoice.apply_checkout_session paid_session(invoice, id: "cs_rest", payment_intent: "pi_rest", amount_total: 147_500)
+    end
+    assert invoice.reload.paid?
+  end
+
+  test "paying a bank transfer client's invoice settles no cash balance" do
+    invoice = invoices(:sakura_january)
+    attach_fake_deliverables invoice
+    clients(:sakura).update! payment_method: "bank_transfer", stripe_customer_id: nil
+
+    invoice.mark_as_paid!
+
+    assert_no_enqueued_jobs only: CashBalanceSettlementJob
+  end
+
   test "paid invoice requires paid_on" do
     invoice = invoices(:acme_january)
     attach_fake_deliverables invoice
@@ -327,7 +357,7 @@ class InvoiceTest < ActiveSupport::TestCase
     Stripe::Customer.stubs(:retrieve).returns(Stripe::Customer.construct_from(id: "cus_test_sakura123"))
     Stripe::Checkout::Session.expects(:create).returns(Stripe::Checkout::Session.construct_from(id: "cs_on_delivery"))
 
-    invoice.deliver!
+    assert_enqueued_with(job: CashBalanceSettlementJob, args: [ clients(:sakura) ]) { invoice.deliver! }
 
     assert invoice.sent?
     assert_equal "cs_on_delivery", invoice.reload.stripe_checkout_session_id

@@ -1,4 +1,6 @@
 class Client < ApplicationRecord
+  include CashBalance
+
   has_paper_trail skip: %i[created_at updated_at]
 
   has_one :address, as: :addressable, dependent: :destroy

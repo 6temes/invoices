@@ -7,8 +7,7 @@
 -%>
 <p class="t-strong" style="<%= greeting_style %>"><%= t(".greeting", client_name: @client.name) %></p>
 <% if opening.present? %><p class="t-body" style="<%= p_style %>"><%= opening %></p><% end %>
-<p class="t-body" style="<%= p_style %>"><%= t(".intro", number: @invoice.invoice_number,
-      amount_received: yen(@pending_payment.amount_received), amount_remaining: yen(@pending_payment.amount_remaining)) %></p>
+<p class="t-body" style="<%= p_style %>"><%= @intro %></p>
 
 <%= render "amount_summary",
       number: @invoice.invoice_number,
@@ -16,12 +15,15 @@
       amount_label: t("invoice.still_due"),
       date_label: t("invoice.due_date"),
       date: @invoice.due_date,
-      amount_due: @invoice.amount_due,
-      received: @pending_payment.amount_received %>
+      amount_due: @pending_payment.amount_received + @pending_payment.amount_remaining,
+      received: @pending_payment.amount_received,
+      received_label: @received_label %>
 
+<% if @pending_payment.bank_details %>
 <%= render "bank_account", heading: t(".transfer_rest"), rows: transfer_bank_rows(@pending_payment.bank_details) %>
 
 <p class="t-body" style="<%= p_style %>"><a href="<%= @pending_payment.instructions_url %>" target="_blank" rel="noopener" style="color:#2563eb;"><%= t("invoice.transfer_instructions") %></a></p>
+<% end %>
 <p class="t-body" style="<%= p_style %>"><%= t(".payment_page") %> <a href="<%= @payment_url %>" target="_blank" rel="noopener" style="color:#2563eb;"><%= t(".payment_page_link") %></a></p>
 
 <p class="t-body" style="<%= p_style %>"><%= t(".closing") %></p>

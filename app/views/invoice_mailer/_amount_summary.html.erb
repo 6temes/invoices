@@ -1,9 +1,9 @@
-<%# locals: (number:, amount:, amount_label:, date_label:, date:, total: nil, credit: 0, amount_due: nil, received: 0) -%>
+<%# locals: (number:, amount:, amount_label:, date_label:, date:, total: nil, credit: 0, amount_due: nil, received: 0, received_label: t("invoice.amount_received")) -%>
 <%
   font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue','Hiragino Sans','Yu Gothic',Meiryo,Arial,sans-serif"
   rows = []
   rows << [ t("invoice.total"), yen(total) ] << [ t("invoice.credit_applied"), "−#{yen(credit)}" ] if credit.positive?
-  rows << [ t("invoice.amount_due"), yen(amount_due) ] << [ t("invoice.amount_received"), "−#{yen(received)}" ] if amount_due
+  rows << [ t("invoice.amount_due"), yen(amount_due) ] << [ received_label, "−#{yen(received)}" ] if amount_due
   rows << [ t("invoice.id"), "##{number}" ]
   rows << [ date_label, date ] if date
 -%>

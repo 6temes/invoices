@@ -93,4 +93,197 @@ class ClientTest < ActiveSupport::TestCase
     assert clients(:sakura).valid?
     assert clients(:fuji).valid?
   end
+
+  test "returning credit refunds the balance less the fee, then charges the fee from what is left" do
+    client = clients(:sakura)
+    client.update! credit_notified_amount: 10_000
+    stub_cash_balance 10_000
+    Stripe::Refund.expects(:create).with(
+      { origin: "customer_balance", customer: "cus_test_sakura123", amount: 9_725, currency: "jpy", instructions_email: "keiri@sakura.example.jp" },
+      { idempotency_key: "return-#{client.id}-ccsbtxn_latest" }
+    ).returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.expects(:create).with do |params, options|
+      params[:amount] == 275 && params[:customer] == "cus_test_sakura123" && params[:confirm] &&
+        params[:payment_method_data] == { type: "customer_balance" } && params[:metadata] == { credit_return_refund: "rcb_return" } &&
+        options == { idempotency_key: "return-fee-#{client.id}-ccsbtxn_latest" }
+    end.returns(Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded"))
+
+    assert_equal :returned, client.refund_cash_balance!(10_000)
+    assert_equal 0, client.reload.credit_notified_amount
+  end
+
+  test "the same balance returned again after new credit arrives is a new return, not a replay" do
+    client = clients(:sakura)
+    stub_cash_balance 10_000
+    keys = []
+    Stripe::Refund.stubs(:create).with { |_, options| keys << options[:idempotency_key] }.returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.stubs(:create).returns(Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded"))
+
+    client.refund_cash_balance!(10_000)
+    stub_latest_cash_balance_transaction "ccsbtxn_newer"
+    client.refund_cash_balance!(10_000)
+
+    assert_equal [ "return-#{client.id}-ccsbtxn_latest", "return-#{client.id}-ccsbtxn_newer" ], keys
+  end
+
+  test "returning credit makes no Stripe call when the balance moved since it was shown" do
+    stub_cash_balance 12_000
+    Stripe::Refund.expects(:create).never
+    Stripe::PaymentIntent.expects(:create).never
+
+    assert_equal :changed, clients(:sakura).refund_cash_balance!(10_000)
+  end
+
+  test "a return is offered only when the client gets back at least the fee" do
+    stub_cash_balance 549
+    Stripe::Refund.expects(:create).never
+
+    client = clients(:sakura)
+    assert_equal 0, client.returnable_credit(549)
+    assert_equal 275, client.returnable_credit(550)
+    assert_equal :nothing_to_return, client.refund_cash_balance!(549)
+  end
+
+  test "a fee already paid on a cancelled return is not charged again" do
+    client = clients(:sakura)
+    client.update! prepaid_return_fee_payment_intent_id: "pi_fee_earlier"
+    stub_cash_balance 9_725
+    Stripe::Refund.expects(:create).with { |params, _| params[:amount] == 9_725 }.returns(Stripe::Refund.construct_from(id: "rcb_again"))
+    Stripe::PaymentIntent.expects(:create).never
+    Stripe::PaymentIntent.expects(:update).with("pi_fee_earlier", metadata: { credit_return_waived_for: "rcb_again" })
+
+    assert_equal 0, client.return_fee
+    assert_equal :returned, client.refund_cash_balance!(9_725)
+    assert_nil client.reload.prepaid_return_fee_payment_intent_id
+  end
+
+  test "a fee charge left waiting for a transfer is cancelled rather than collected later" do
+    stub_cash_balance 10_000
+    Stripe::Refund.stubs(:create).returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.stubs(:create).returns(Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "requires_action"))
+    Stripe::PaymentIntent.expects(:cancel).with("pi_fee")
+
+    assert_equal :returned, clients(:sakura).refund_cash_balance!(10_000)
+  end
+
+  test "a return holds settlement off until it ends, then records when it began" do
+    client = clients(:sakura)
+    stub_cash_balance 10_000
+    Stripe::Refund.expects(:create).with do
+      assert client.reload.credit_return_in_flight?
+      true
+    end.returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.stubs(:create).returns(Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded"))
+
+    freeze_time do
+      client.refund_cash_balance!(10_000)
+
+      assert_not client.reload.credit_return_in_flight?
+      assert_equal Time.current, client.credit_returned_at
+    end
+  end
+
+  test "a second return while one is under way makes no Stripe call" do
+    client = clients(:sakura)
+    client.update! credit_return_started_at: 1.minute.ago
+    Stripe::Customer.expects(:retrieve).never
+    Stripe::Refund.expects(:create).never
+
+    assert_equal :started, client.refund_cash_balance!(10_000)
+  end
+
+  test "a return whose marker outlived a crash no longer holds anything off" do
+    client = clients(:sakura)
+    client.update! credit_return_started_at: (Client::CREDIT_RETURN_WINDOW + 1.minute).ago
+
+    assert_not client.credit_return_in_flight?
+  end
+
+  test "a fee charge that fails after the refund is reported, and the return still stands" do
+    client = clients(:sakura)
+    client.update! credit_notified_amount: 10_000
+    stub_cash_balance 10_000
+    Stripe::Refund.stubs(:create).returns(Stripe::Refund.construct_from(id: "rcb_return"))
+    Stripe::PaymentIntent.stubs(:create).raises(Stripe::APIConnectionError.new("timeout"))
+
+    assert_error_reported(Stripe::APIConnectionError) do
+      assert_equal :started, client.refund_cash_balance!(10_000)
+    end
+    assert_equal 0, client.reload.credit_notified_amount
+    assert_not client.credit_return_in_flight?
+  end
+
+  test "a return receipt names the client only once a return began after its page was shown" do
+    client = clients(:sakura)
+    receipt = client.credit_return_receipt
+
+    assert_nil Client.find_by_credit_return_receipt(receipt)
+
+    client.update! credit_returned_at: 1.second.from_now
+    assert_equal client, Client.find_by_credit_return_receipt(receipt)
+
+    client.update! credit_returned_at: 1.hour.ago
+    assert_nil Client.find_by_credit_return_receipt(receipt)
+    assert_nil Client.find_by_credit_return_receipt("forged")
+  end
+
+  test "a credit return link stops working once the notified credit changes" do
+    client = clients(:sakura)
+    client.update! credit_notified_amount: 10_000
+    token = client.generate_token_for(:credit_refund)
+
+    assert_equal client, Client.find_by_token_for(:credit_refund, token)
+
+    client.update! credit_notified_amount: 4_000
+    assert_nil Client.find_by_token_for(:credit_refund, token)
+  end
+
+  test "a cancelled return makes the next return free" do
+    client = clients(:sakura)
+    stub_fee_charge refund_status: "canceled"
+
+    client.release_return_fee!
+
+    assert_equal "pi_fee", client.reload.prepaid_return_fee_payment_intent_id
+  end
+
+  test "a fee that already paid for a free return is not released again" do
+    client = clients(:sakura)
+    stub_fee_charge refund_status: "canceled", waived: true
+
+    client.release_return_fee!
+
+    assert_nil client.reload.prepaid_return_fee_payment_intent_id
+  end
+
+  test "a return still on its way keeps the fee charged" do
+    client = clients(:sakura)
+    stub_fee_charge refund_status: "pending"
+
+    client.release_return_fee!
+
+    assert_nil client.reload.prepaid_return_fee_payment_intent_id
+  end
+
+  private
+
+  def stub_fee_charge(refund_status:, waived: false)
+    metadata = { credit_return_refund: "rcb_return", credit_return_waived_for: ("rcb_free" if waived) }.compact
+    fee = Stripe::PaymentIntent.construct_from(id: "pi_fee", status: "succeeded", metadata:)
+    draw = Stripe::PaymentIntent.construct_from(id: "pi_draw", status: "succeeded", metadata: { invoice_id: "1" })
+    Stripe::PaymentIntent.stubs(:list).with(customer: "cus_test_sakura123", limit: 100)
+      .returns(Stripe::ListObject.construct_from(object: "list", data: [ draw, fee ], has_more: false))
+    Stripe::Refund.stubs(:retrieve).with("rcb_return").returns(Stripe::Refund.construct_from(id: "rcb_return", status: refund_status))
+  end
+
+  def stub_cash_balance(amount)
+    Stripe::Customer.stubs(:retrieve).with(id: "cus_test_sakura123", expand: [ "cash_balance" ])
+      .returns(Stripe::Customer.construct_from(id: "cus_test_sakura123", cash_balance: { available: { jpy: amount } }))
+    stub_latest_cash_balance_transaction "ccsbtxn_latest"
+  end
+
+  def stub_latest_cash_balance_transaction(id)
+    Stripe::Customer.stubs(:list_cash_balance_transactions).with("cus_test_sakura123", limit: 1)
+      .returns(Stripe::ListObject.construct_from(object: "list", data: [ { id:, object: "customer_cash_balance_transaction" } ], has_more: false))
+  end
 end
