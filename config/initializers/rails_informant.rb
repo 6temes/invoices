@@ -31,4 +31,6 @@ RailsInformant.configure do |config|
   # Auto-purge resolved errors after N days (nil = keep forever)
   # config.retention_days = 30
   config.capture_browser_errors = true
+  # No inline scripts of our own, so a frame on the page URL is an injected script
+  config.browser_inline_scripts = false
 end
