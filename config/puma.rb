@@ -50,7 +50,7 @@ pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
 unless ENV["RAILS_ENV"] == "test"
   require "prometheus_exporter/instrumentation"
 
-  on_booted do
+  after_booted do
     PrometheusExporter::Instrumentation::Puma.start
     PrometheusExporter::Instrumentation::Process.start type: "web"
     PrometheusExporter::Instrumentation::ActiveRecord.start config_labels: [ :database ]
