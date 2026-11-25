@@ -22,7 +22,7 @@ class TokenLoggingTest < ActionDispatch::IntegrationTest
     attach_deliverables invoice
     token = invoice.signed_id(purpose: :payment, expires_in: 60.days)
 
-    get "/pay/#{token.sub("--", "%2D%2D")}"
+    get "/pay/#{token.gsub("--", "%2D%2D")}"
 
     assert_response :success
     assert_logged_without token.split("--").first
