@@ -117,6 +117,49 @@ class PaymentsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=submit]", count: 0
   end
 
+  test "show leaves recording a card payment to the webhook" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_test_paid"
+    Stripe::Checkout::Session.stubs(:retrieve).returns(Stripe::Checkout::Session.construct_from(
+      id: "cs_test_paid", status: "complete", payment_status: "paid", currency: "jpy",
+      amount_total: @invoice.total, payment_intent: "pi_test_paid", metadata: { invoice_id: @invoice.id.to_s }))
+
+    assert_no_difference -> { @invoice.payments.count } do
+      assert_no_enqueued_jobs do
+        get public_payment_path(token: @token)
+      end
+    end
+
+    assert @invoice.reload.sent?
+    assert_select ".payment-pending", text: I18n.t("invoice.payment_pending", locale: @invoice.locale)
+    assert_select "input[type=submit]", count: 0
+  end
+
+  test "show offers the pay button again once a part payment by card is recorded" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_test_part"
+    @invoice.payments.create! kind: :checkout, amount: 100_000, paid_on: Date.current, stripe_payment_intent_id: "pi_test_part"
+    Stripe::Checkout::Session.stubs(:retrieve).returns(Stripe::Checkout::Session.construct_from(
+      id: "cs_test_part", status: "complete", payment_status: "paid", currency: "jpy",
+      amount_total: 100_000, payment_intent: "pi_test_part", metadata: { invoice_id: @invoice.id.to_s }))
+
+    get public_payment_path(token: @token)
+
+    assert_select "input[type=submit]"
+    assert_select ".payment-pending", count: 0
+  end
+
+  test "show leaves a failed delayed payment's session for the next payment to replace" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_test_konbini"
+    Stripe::Checkout::Session.stubs(:retrieve).returns(unpaid_session("cs_test_konbini"))
+    Stripe::PaymentIntent.stubs(:retrieve)
+      .returns(Stripe::PaymentIntent.construct_from(id: "pi_test_konbini", status: "canceled"))
+
+    get public_payment_path(token: @token)
+
+    assert_equal "cs_test_konbini", @invoice.reload.stripe_checkout_session_id
+    assert_select "input[type=submit]"
+    assert_select ".payment-pending", count: 0
+  end
+
   test "show offers the pay button when the pending check fails" do
     @invoice.update_columns stripe_checkout_session_id: "cs_test_konbini"
     Stripe::Checkout::Session.stubs(:retrieve).raises(Stripe::APIConnectionError.new("Connection failed"))

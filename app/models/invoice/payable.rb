@@ -61,6 +61,8 @@ module Invoice::Payable
     apply_checkout_session session, payment_intent: self.class.unsettled_payment_intent(session)
   end
 
+  # Read-only, because anything that fetches the mailed payment link calls it.
+  # Recording a completed Checkout is the webhook's job.
   def pending_payment
     return if stripe_checkout_session_id.blank?
 
@@ -68,7 +70,11 @@ module Invoice::Payable
     return unless session.status == "complete"
 
     intent = self.class.unsettled_payment_intent(session)
-    Invoice::PendingPayment.from(intent) if apply_checkout_session(session, payment_intent: intent) == :pending
+    case
+    when intent.nil? then Invoice::PendingPayment.new if unrecorded_checkout_payment?(session)
+    when intent.status.in?(FAILED_PAYMENT_INTENT_STATUSES) then nil
+    else Invoice::PendingPayment.from(intent)
+    end
   end
 
   # Stripe redelivers events and sends them out of order, so only a larger amount
@@ -320,6 +326,10 @@ module Invoice::Payable
       record_payment! kind: :checkout, amount: session.amount_total, stripe_payment_intent_id: session.payment_intent,
         stripe_checkout_session_id: session.id
     end
+  end
+
+  def unrecorded_checkout_payment?(session)
+    session.payment_status == "paid" && !payments.exists?(stripe_payment_intent_id: session.payment_intent)
   end
 
   # A Checkout payment can succeed while its webhook is still being retried. It
