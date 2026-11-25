@@ -94,6 +94,12 @@ Keep the token out of the repo: no `.mcp.json`, no committed settings.
 
 Deployed with [Kamal](https://kamal-deploy.org) and Docker to a single VPS, behind a Cloudflare Tunnel. **CI/CD deploys automatically on merge to `main`** (GitHub Actions runs `kamal deploy`); infrastructure values come from GitHub Actions secrets, never from the repo. SQLite databases and Active Storage files persist on a mounted volume.
 
+A new production database starts with a sample business and no login: the seeds create their sample user in development and test only. Create yours from `bin/kamal console`:
+
+```ruby
+User.create!(email_address: "you@example.com", password: "a long passphrase of your own")
+```
+
 ## Tech Stack
 
 | Layer | Choice |

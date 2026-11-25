@@ -24,10 +24,13 @@ business.update!(
   }
 )
 
-# User
-User.find_or_create_by!(email_address: "taro@example.com") do |u|
-  u.password = "password"
-  u.password_confirmation = "password"
+# Local environments only: db:prepare loads this file into every freshly
+# created database, production included.
+if Rails.env.local?
+  User.find_or_create_by!(email_address: "taro@example.com") do |u|
+    u.password = "password"
+    u.password_confirmation = "password"
+  end
 end
 
-puts "Seeded Business and User"
+puts "Seeds loaded"
