@@ -6,3 +6,7 @@
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc
 ]
+
+# Redirect locations carry signed payment, credit and password-reset tokens and
+# Stripe Checkout URLs, and Rails logs each location unless it matches here.
+Rails.application.config.filter_redirect += [ %r{/pay/}, %r{/credit/}, %r{/passwords/}, "checkout.stripe.com" ]
