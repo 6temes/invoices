@@ -1,7 +1,9 @@
-function escapeHtml(str) {
-  const div = document.createElement('div')
-  div.textContent = str
-  return div.innerHTML
+// The popup is built from DOM nodes, never markup, because the issue title and
+// client names are text from other people.
+function element(tag, properties = {}, children = []) {
+  const node = Object.assign(document.createElement(tag), properties)
+  node.append(...children)
+  return node
 }
 
 ;(async () => {
@@ -49,31 +51,33 @@ function escapeHtml(str) {
     // Remove existing popup
     document.querySelector('.inv-popup')?.remove()
 
-    const popup = document.createElement('div')
-    popup.className = 'inv-popup'
-    popup.innerHTML = `
-      <div class="inv-popup-header">
-        <strong>Log Hours</strong>
-        <button class="inv-popup-close">&times;</button>
-      </div>
-      <div class="inv-popup-body">
-        <label>Client</label>
-        <select class="inv-select">
-          ${clients.map(c => `<option value="${escapeHtml(String(c.id))}" ${matchedClient && matchedClient.id === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
-        </select>
-        <label>Hours</label>
-        <input type="number" step="0.25" min="0.25" value="1" class="inv-hours">
-        <label>Description</label>
-        <input type="text" value="#${escapeHtml(issueNumber)} — ${escapeHtml(title)}" class="inv-desc">
-        <button class="inv-save-btn">Save</button>
-        <div class="inv-status"></div>
-      </div>
-    `
+    const close = element('button', { className: 'inv-popup-close', textContent: '×' })
+    const save = element('button', { className: 'inv-save-btn', textContent: 'Save' })
+    const options = clients.map(c =>
+      element('option', { value: String(c.id), textContent: c.name, selected: matchedClient?.id === c.id })
+    )
+
+    const popup = element('div', { className: 'inv-popup' }, [
+      element('div', { className: 'inv-popup-header' }, [
+        element('strong', { textContent: 'Log Hours' }),
+        close
+      ]),
+      element('div', { className: 'inv-popup-body' }, [
+        element('label', { textContent: 'Client' }),
+        element('select', { className: 'inv-select' }, options),
+        element('label', { textContent: 'Hours' }),
+        element('input', { type: 'number', step: '0.25', min: '0.25', value: '1', className: 'inv-hours' }),
+        element('label', { textContent: 'Description' }),
+        element('input', { type: 'text', value: `#${issueNumber} — ${title}`, className: 'inv-desc' }),
+        save,
+        element('div', { className: 'inv-status' })
+      ])
+    ])
 
     document.body.appendChild(popup)
 
-    popup.querySelector('.inv-popup-close').addEventListener('click', () => popup.remove())
-    popup.querySelector('.inv-save-btn').addEventListener('click', () => saveHours(popup))
+    close.addEventListener('click', () => popup.remove())
+    save.addEventListener('click', () => saveHours(popup))
   }
 
   async function saveHours(popup) {
