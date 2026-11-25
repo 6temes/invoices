@@ -40,7 +40,7 @@ bin/brakeman --no-pager
 bin/ci                                       # full local pipeline (config/ci.rb)
 ```
 
-`bin/ci` also runs `RAILS_ENV=test bin/rails db:seed:replant`; GitHub CI does not, so broken seeds pass PR checks. CI's `validate-ubl` job runs `test/builders/ubl_invoice_builder_test.rb` against the JP PINT validator, whose assets come from `bin/fetch-ubl-assets`.
+`bin/ci` also runs `RAILS_ENV=test bin/rails db:seed:replant`; GitHub CI loads the seeds only through `test/db/seeds_test.rb`. CI's `validate-ubl` job runs `test/builders/ubl_invoice_builder_test.rb` against the JP PINT validator, whose assets come from `bin/fetch-ubl-assets`.
 
 ## Architecture
 
