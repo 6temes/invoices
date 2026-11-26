@@ -119,6 +119,18 @@ class CheckoutSessionReconciliationJobTest < ActiveJob::TestCase
     end
   end
 
+  test "the daily pass reconciles only sent invoices" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_sent"
+    invoices(:acme_january).update_columns stripe_checkout_session_id: "cs_already_paid"
+    invoices(:acme_february_draft).update_columns stripe_checkout_session_id: "cs_draft"
+
+    assert_enqueued_jobs 1, only: CheckoutSessionReconciliationJob do
+      assert_enqueued_with job: CheckoutSessionReconciliationJob, args: [ "cs_sent" ] do
+        Invoice.reconcile_stored_checkout_sessions_later
+      end
+    end
+  end
+
   test "the daily pass leaves invoices without a stored session alone" do
     Stripe::Checkout::Session.expects(:retrieve).never
 
