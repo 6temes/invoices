@@ -2,6 +2,11 @@ RailsInformant.configure do |config|
   # Error capture — disable in development/test by default
   config.capture_errors = !Rails.env.local?
 
+  # The operator running `rails runner` reads its exception on their own terminal. The gem
+  # captures runner errors by default because elsewhere runner backs cron; here it does not,
+  # as the recurring work in config/recurring.yml goes through Solid Queue.
+  config.capture_runner_errors = false
+
   # User Context
   # RailsInformant captures user context set via RailsInformant::Current.user_context.
   # It also auto-detects Current.user or Warden user and captures their ID and email.
