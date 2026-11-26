@@ -16,6 +16,9 @@ production:
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: at 3am every day
+  reconcile_stored_checkout_sessions:
+    command: "Invoice.reconcile_stored_checkout_sessions_later"
+    schedule: at 5am every day
   generate_monthly_invoices:
     class: InvoiceGenerationJob
     schedule: "0 9 1 * *"

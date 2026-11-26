@@ -16,6 +16,13 @@ module Invoice::Payable
   FAILED_PAYMENT_INTENT_STATUSES = %w[ requires_payment_method canceled ].freeze
 
   class_methods do
+    # The webhook records a Checkout payment; this daily pass catches one whose events never arrived.
+    def reconcile_stored_checkout_sessions_later
+      sent.where.not(stripe_checkout_session_id: nil).find_each do
+        CheckoutSessionReconciliationJob.perform_later it.stripe_checkout_session_id
+      end
+    end
+
     def reconcile_checkout_session(session)
       apply_checkout_session session, payment_intent: unsettled_payment_intent(session)
     end
@@ -62,7 +69,7 @@ module Invoice::Payable
   end
 
   # Read-only, because anything that fetches the mailed payment link calls it.
-  # Recording a completed Checkout is the webhook's job.
+  # Recording a completed Checkout is the webhook's job, with a daily backstop.
   def pending_payment
     return if stripe_checkout_session_id.blank?
 
