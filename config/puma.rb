@@ -1,3 +1,5 @@
+require_relative "worktree"
+
 # This configuration file will be evaluated by Puma. The top-level methods that
 # are invoked here are part of Puma's configuration DSL. For more information
 # about methods provided by the DSL, see https://puma.io/puma/Puma/DSL.html.
@@ -28,8 +30,9 @@
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
-# Specifies the `port` that Puma will listen on to receive requests; default is 3000.
-port ENV.fetch("PORT", 3000)
+# Specifies the `port` that Puma will listen on to receive requests; default is 3000, or a port
+# derived from the checkout in a linked git worktree.
+port ENV.fetch("PORT") { Worktree.port(File.expand_path("..", __dir__), 3000) }
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
