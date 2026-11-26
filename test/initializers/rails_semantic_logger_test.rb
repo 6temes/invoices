@@ -6,7 +6,7 @@ class RailsSemanticLoggerTest < ActionDispatch::IntegrationTest
     logger = SemanticLogger::Test::CaptureLogEvents.new
     ActionController::Base.stubs(:logger).returns(logger)
 
-    put password_path(user.password_reset_token), params: { password: "new", password_confirmation: "new" }
+    put password_path(user.password_reset_token), params: { password: "a long new passphrase", password_confirmation: "a long new passphrase" }
 
     log = logger.events.find { it.message.start_with?("Unpermitted parameter") }
     assert_equal %w[token], log.payload[:keys]

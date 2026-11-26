@@ -102,6 +102,49 @@ class CheckoutSessionReconciliationJobTest < ActiveJob::TestCase
     end
   end
 
+  test "the daily pass records a paid Checkout whose webhook never arrived, once" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_missed"
+    Stripe::Checkout::Session.stubs(:retrieve).with("cs_missed").returns(session(id: "cs_missed", status: "complete", payment_status: "paid"))
+
+    assert_enqueued_emails 1 do
+      perform_enqueued_jobs(only: CheckoutSessionReconciliationJob) { Invoice.reconcile_stored_checkout_sessions_later }
+    end
+    assert @invoice.reload.paid?
+
+    @invoice.update_columns status: "sent"
+    assert_no_enqueued_emails do
+      assert_no_difference -> { @invoice.payments.count } do
+        perform_enqueued_jobs(only: CheckoutSessionReconciliationJob) { Invoice.reconcile_stored_checkout_sessions_later }
+      end
+    end
+  end
+
+  test "the daily pass reconciles only sent invoices" do
+    @invoice.update_columns stripe_checkout_session_id: "cs_sent"
+    invoices(:acme_january).update_columns stripe_checkout_session_id: "cs_already_paid"
+    invoices(:acme_february_draft).update_columns stripe_checkout_session_id: "cs_draft"
+
+    assert_enqueued_jobs 1, only: CheckoutSessionReconciliationJob do
+      assert_enqueued_with job: CheckoutSessionReconciliationJob, args: [ "cs_sent" ] do
+        Invoice.reconcile_stored_checkout_sessions_later
+      end
+    end
+  end
+
+  test "the daily pass leaves invoices without a stored session alone" do
+    Stripe::Checkout::Session.expects(:retrieve).never
+
+    assert_no_enqueued_jobs only: CheckoutSessionReconciliationJob do
+      Invoice.reconcile_stored_checkout_sessions_later
+    end
+  end
+
+  test "production runs the daily pass" do
+    tasks = YAML.load_file(Rails.root.join("config/recurring.yml")).fetch("production")
+
+    assert_includes tasks.values.pluck("command"), "Invoice.reconcile_stored_checkout_sessions_later"
+  end
+
   private
 
   def session(id:, status:, payment_status:, invoice: @invoice)

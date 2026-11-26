@@ -28,8 +28,8 @@ business.update!(
 # created database, production included.
 if Rails.env.local?
   User.find_or_create_by!(email_address: "taro@example.com") do |u|
-    u.password = "password"
-    u.password_confirmation = "password"
+    u.password = "sample password"
+    u.password_confirmation = "sample password"
   end
 end
 
