@@ -35,9 +35,15 @@ RailsInformant.configure do |config|
   config.browser_inline_scripts = false
 end
 
-# Error capture records the request URL and each request path in its breadcrumbs.
+# Error capture records the request URL, the request headers and each request
+# path in its breadcrumbs. A form posted from a link page sends that link as its Referer.
 module RailsInformantUrlWithoutToken
   def filtered_url(url) = RequestPathFilter.filter(super)
+
+  private
+    def extract_headers(request)
+      super.tap { it["Referer"] &&= RequestPathFilter.filter(it["Referer"]) }
+    end
 end
 
 module RailsInformantBreadcrumbWithoutToken

@@ -24,6 +24,14 @@ class TokenFilteringSpanProcessorTest < ActiveSupport::TestCase
     assert_not_includes attributes.values.join(" "), "cs_test_a1b2"
   end
 
+  test "a path without a token is left as recorded" do
+    finish_span "GET /invoices/1", "url.path" => "/invoices/1"
+
+    span = @exporter.finished_spans.sole
+    assert_equal "/invoices/1", span.attributes["url.path"]
+    assert_equal 1, span.total_recorded_attributes
+  end
+
   test "an app booted with an OTLP endpoint filters spans and still exports them" do
     script = "print OpenTelemetry.tracer_provider.instance_variable_get(:@span_processors).map { it.class.name }.join(',')"
     output, status = Open3.capture2({ "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://127.0.0.1:9", "RAILS_ENV" => "test" },

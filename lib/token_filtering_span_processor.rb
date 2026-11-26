@@ -5,7 +5,12 @@ class TokenFilteringSpanProcessor < OpenTelemetry::SDK::Trace::SpanProcessor
 
   def on_start(span, _parent_context)
     span.attributes&.slice(*PATH_ATTRIBUTES)&.each do |key, value|
-      span.set_attribute key, RequestPathFilter.filter(value) if value.is_a?(String)
+      next unless value.is_a?(String)
+
+      # Each write counts towards the span's attribute total, and the exporter
+      # reports the excess as dropped attributes.
+      filtered = RequestPathFilter.filter(value)
+      span.set_attribute key, filtered unless filtered == value
     end
   end
 end

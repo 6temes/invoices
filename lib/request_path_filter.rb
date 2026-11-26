@@ -12,9 +12,11 @@ module RequestPathFilter
     location, separator, query = path_or_url.partition("?")
     previous = nil
     segments = location.split("/", -1).map do |segment|
-      decoded = CGI.unescapeURIComponent(segment)
+      # A scanner's %FF is not UTF-8, and matching it unscrubbed raises.
+      decoded = CGI.unescapeURIComponent(segment).scrub
       token = decoded.match?(CHECKOUT_SESSION_ID) || (previous.in?(TOKEN_PREFIXES) && !decoded.in?(ROUTE_WORDS) && decoded.present?)
-      previous = decoded
+      # The router ignores empty segments, so /pay//token still reaches the token.
+      previous = decoded if decoded.present?
       token ? FILTERED : segment
     end
     "#{segments.join("/")}#{separator}#{query}"

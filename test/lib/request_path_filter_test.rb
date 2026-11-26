@@ -16,13 +16,22 @@ class RequestPathFilterTest < ActiveSupport::TestCase
     assert_equal "/p%61y/[FILTERED]", RequestPathFilter.filter("/p%61y/abc--def")
   end
 
+  test "a token after an empty segment is still filtered" do
+    assert_equal "/pay//[FILTERED]", RequestPathFilter.filter("/pay//abc--def")
+  end
+
+  test "an escape that is not UTF-8 is filtered without raising" do
+    assert_equal "/pay/[FILTERED]", RequestPathFilter.filter("/pay/%FF%FE")
+    assert_equal "/invoices/%FF", RequestPathFilter.filter("/invoices/%FF")
+  end
+
   test "Checkout session ids are filtered anywhere in a path, and queries are kept" do
     assert_equal "/v1/checkout/sessions/[FILTERED]?expand=x", RequestPathFilter.filter("/v1/checkout/sessions/cs_test_a1b2?expand=x")
     assert_equal "https://api.stripe.com/v1/checkout/sessions/[FILTERED]", RequestPathFilter.filter("https://api.stripe.com/v1/checkout/sessions/cs_live_a1b2")
   end
 
   test "paths without a token are unchanged" do
-    %w[ /passwords/new /passwords /invoices/12 /pay / ].each do
+    %w[ /passwords/new /passwords /passwords/ /invoices/12 /pay /pay/ / ].each do
       assert_equal it, RequestPathFilter.filter(it)
     end
   end

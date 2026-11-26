@@ -9,6 +9,14 @@ class RailsInformantTest < ActiveSupport::TestCase
     assert_equal "https://example.com/credit/[FILTERED]?locale=ja", url
   end
 
+  test "a captured Referer leaves out the token of the page that posted the form" do
+    env = Rack::MockRequest.env_for("https://example.com/pay/abc--def", method: "POST", "HTTP_REFERER" => "https://example.com/pay/abc--def")
+
+    headers = RailsInformant::ContextBuilder.build_request_context(env)[:headers]
+
+    assert_equal "https://example.com/pay/[FILTERED]", headers["Referer"]
+  end
+
   test "breadcrumbs leave out the token in a request path and a redirect" do
     buffer = RailsInformant::BreadcrumbBuffer.new
     buffer.record category: "process_action.action_controller", message: "process_action", metadata: { path: "/passwords/abc--def/edit" }
