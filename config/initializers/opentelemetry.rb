@@ -13,6 +13,12 @@ if ENV["OTEL_EXPORTER_OTLP_ENDPOINT"].present? && !defined?(::Rails::Console)
     c.use_all "OpenTelemetry::Instrumentation::Rack" => { untraced_endpoints: [ "/up" ] }
   end
 
+  # Added after configure, since a processor passed to it replaces the exporter set
+  # from the environment, and after initialization, when lib/ can be autoloaded.
+  Rails.application.config.after_initialize do
+    OpenTelemetry.tracer_provider.add_span_processor TokenFilteringSpanProcessor.new
+  end
+
   # Add SQL queries to ActiveRecord OTel spans.
   # The built-in ActiveRecord instrumentation creates timing spans (e.g. "Business query")
   # but doesn't extract SQL from the notification payload, leaving spans empty.

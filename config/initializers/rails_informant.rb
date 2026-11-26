@@ -34,3 +34,23 @@ RailsInformant.configure do |config|
   # No inline scripts of our own, so a frame on the page URL is an injected script
   config.browser_inline_scripts = false
 end
+
+# Error capture records the request URL, the request headers and each request
+# path in its breadcrumbs. A form posted from a link page sends that link as its Referer.
+module RailsInformantUrlWithoutToken
+  def filtered_url(url) = RequestPathFilter.filter(super)
+
+  private
+    def extract_headers(request)
+      super.tap { it["Referer"] &&= RequestPathFilter.filter(it["Referer"]) }
+    end
+end
+
+module RailsInformantBreadcrumbWithoutToken
+  def record(metadata: {}, **)
+    super(metadata: metadata.merge(metadata.slice(:path, :location).transform_values { RequestPathFilter.filter(it) }), **)
+  end
+end
+
+RailsInformant::ContextBuilder.singleton_class.prepend RailsInformantUrlWithoutToken
+RailsInformant::BreadcrumbBuffer.prepend RailsInformantBreadcrumbWithoutToken
