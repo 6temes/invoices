@@ -17,6 +17,23 @@ class RailsInformantTest < ActiveSupport::TestCase
     assert_equal "https://example.com/pay/[FILTERED]", headers["Referer"]
   end
 
+  test "an error raised under rails runner is not recorded" do
+    RailsInformant.stubs(:initialized?).returns(true)
+    RailsInformant.stubs(:runner_mode?).returns(true)
+
+    assert_no_difference -> { RailsInformant::ErrorGroup.count } do
+      RailsInformant::ErrorRecorder.record RuntimeError.new("runner failure")
+    end
+  end
+
+  test "the same error outside rails runner is recorded" do
+    RailsInformant.stubs(:initialized?).returns(true)
+
+    assert_difference -> { RailsInformant::ErrorGroup.count } do
+      RailsInformant::ErrorRecorder.record RuntimeError.new("server failure")
+    end
+  end
+
   test "breadcrumbs leave out the token in a request path and a redirect" do
     buffer = RailsInformant::BreadcrumbBuffer.new
     buffer.record category: "process_action.action_controller", message: "process_action", metadata: { path: "/passwords/abc--def/edit" }
